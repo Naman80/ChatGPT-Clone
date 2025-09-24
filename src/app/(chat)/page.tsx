@@ -1,5 +1,10 @@
-import { ChatInterface } from "@/components/chat/ChatInterface";
+import { ChatContainer } from "@/components/chat";
+import { ChatListProvider } from "@/contexts/ChatListContext";
 
 export default async function Dashboard() {
-  return <ChatInterface />;
+  return (
+    <ChatListProvider>
+      <ChatContainer />
+    </ChatListProvider>
+  );
 }

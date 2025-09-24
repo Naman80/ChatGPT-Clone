@@ -1,54 +1,34 @@
 import { auth } from "@clerk/nextjs/server";
-import clientPromise from "@/lib/mongodb";
 import { NextResponse } from "next/server";
+import { getUserChats, createChatInDB } from "@/lib/chat-db";
 
 export async function GET(req: Request) {
-  console.log("🚀 [CHATS API] Starting GET request to fetch all chats");
+  console.log("🚀 [CHATS API V2] Starting GET request to fetch all chats");
 
   try {
-    console.log("🔐 [CHATS API] Authenticating user...");
+    console.log("🔐 [CHATS API V2] Authenticating user...");
     const { userId } = await auth();
     console.log(
-      "✅ [CHATS API] User authenticated:",
+      "✅ [CHATS API V2] User authenticated:",
       userId ? `User ID: ${userId}` : "No user ID"
     );
 
     if (!userId) {
-      console.log("❌ [CHATS API] Authentication failed - no userId");
+      console.log("❌ [CHATS API V2] Authentication failed - no userId");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("💾 [CHATS API] Connecting to database...");
-    const client = await clientPromise;
-    const db = client.db("chatgpt-clone");
-    console.log("✅ [CHATS API] Database connection established");
-
-    console.log("🔍 [CHATS API] Querying chats for user:", userId);
-    const chats = await db
-      .collection("chats")
-      .find({ userId })
-      .sort({ updatedAt: -1 })
-      .toArray();
-    console.log("✅ [CHATS API] Found chats:", {
+    console.log("🔍 [CHATS API V2] Querying chats for user:", userId);
+    const chats = await getUserChats(userId);
+    console.log("✅ [CHATS API V2] Found chats:", {
       count: chats.length,
-      chatIds: chats.map((c) => c._id.toString()),
+      chatIds: chats.map((c) => c.id),
     });
 
-    // Convert MongoDB _id to id and format dates
-    console.log("🔄 [CHATS API] Formatting chat data...");
-    const formattedChats = chats.map((chat) => ({
-      id: chat._id.toString(),
-      title: chat.title,
-      createdAt: chat.createdAt,
-      updatedAt: chat.updatedAt,
-      messages: [], // Messages will be loaded separately
-    }));
-    console.log("✅ [CHATS API] Chats formatted successfully");
-
-    console.log("📤 [CHATS API] Returning formatted chats");
-    return NextResponse.json(formattedChats);
+    console.log("📤 [CHATS API V2] Returning chats");
+    return NextResponse.json(chats);
   } catch (error) {
-    console.error("💥 [CHATS API] GET Error occurred:", {
+    console.error("💥 [CHATS API V2] GET Error occurred:", {
       message: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : "No stack trace",
       timestamp: new Date().toISOString(),
@@ -61,62 +41,43 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  console.log("🚀 [CHATS API] Starting POST request to create new chat");
+  console.log("🚀 [CHATS API V2] Starting POST request to create new chat");
 
   try {
-    console.log("🔐 [CHATS API] Authenticating user...");
+    console.log("🔐 [CHATS API V2] Authenticating user...");
     const { userId } = await auth();
     console.log(
-      "✅ [CHATS API] User authenticated:",
+      "✅ [CHATS API V2] User authenticated:",
       userId ? `User ID: ${userId}` : "No user ID"
     );
 
     if (!userId) {
-      console.log("❌ [CHATS API] Authentication failed - no userId");
+      console.log("❌ [CHATS API V2] Authentication failed - no userId");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("📝 [CHATS API] Parsing request body...");
+    console.log("📝 [CHATS API V2] Parsing request body...");
     const { title } = await req.json();
-    console.log("✅ [CHATS API] Request parsed:", {
+    console.log("✅ [CHATS API V2] Request parsed:", {
       title: title || "No title provided",
     });
 
-    console.log("💾 [CHATS API] Connecting to database...");
-    const client = await clientPromise;
-    const db = client.db("chatgpt-clone");
-    console.log("✅ [CHATS API] Database connection established");
+    console.log("🆕 [CHATS API V2] Creating new chat...");
+    const chatId = await createChatInDB(userId, title || "New Chat");
+    console.log("✅ [CHATS API V2] Chat created with ID:", chatId);
 
-    const newChat = {
-      userId,
+    const responseData = {
+      id: chatId,
       title: title || "New Chat",
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
-    console.log("💾 [CHATS API] Inserting new chat:", {
-      userId,
-      title: newChat.title,
-      timestamp: newChat.createdAt.toISOString(),
-    });
-
-    const result = await db.collection("chats").insertOne(newChat);
-    console.log(
-      "✅ [CHATS API] Chat created with ID:",
-      result.insertedId.toString()
-    );
-
-    const responseData = {
-      id: result.insertedId.toString(),
-      title: newChat.title,
-      createdAt: newChat.createdAt,
-      updatedAt: newChat.updatedAt,
       messages: [],
     };
-    console.log("📤 [CHATS API] Returning created chat data");
+    console.log("📤 [CHATS API V2] Returning created chat data");
 
     return NextResponse.json(responseData);
   } catch (error) {
-    console.error("💥 [CHATS API] POST Error occurred:", {
+    console.error("💥 [CHATS API V2] POST Error occurred:", {
       message: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : "No stack trace",
       timestamp: new Date().toISOString(),

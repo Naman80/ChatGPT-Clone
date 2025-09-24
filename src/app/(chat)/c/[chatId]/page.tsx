@@ -1,4 +1,5 @@
-import { ChatInterface } from "@/components/chat/ChatInterface";
+import { ChatContainer } from "@/components/chat";
+import { ChatListProvider } from "@/contexts/ChatListContext";
 
 interface ChatPageProps {
   params: {
@@ -8,5 +9,9 @@ interface ChatPageProps {
 
 export default async function ChatPage({ params }: ChatPageProps) {
   const { chatId } = await params;
-  return <ChatInterface chatId={chatId} />;
+  return (
+    <ChatListProvider>
+      <ChatContainer chatId={chatId} />
+    </ChatListProvider>
+  );
 }

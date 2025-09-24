@@ -23,10 +23,6 @@ export default async function ChatLayout({
               ChatGPT Clone
             </h1>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
-                Welcome,{" "}
-                {user.firstName || user.emailAddresses[0]?.emailAddress}
-              </span>
               <UserButton afterSignOutUrl="/" />
             </div>
           </div>

@@ -1,82 +1,72 @@
-import { streamText } from "ai";
+import { streamText, convertToModelMessages, UIMessage } from "ai";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
 import { getCurrentModel, getLLMService } from "@/lib/llm";
+import { saveChatMessages, chatExists, createChatInDB } from "@/lib/chat-db";
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
-  console.log("🚀 [CHAT API] Starting POST request");
+  console.log("🚀 [CHAT API V2] Starting POST request");
 
   try {
-    console.log("🔐 [CHAT API] Authenticating user...");
+    console.log("🔐 [CHAT API V2] Authenticating user...");
     const { userId } = await auth();
     console.log(
-      "✅ [CHAT API] User authenticated:",
+      "✅ [CHAT API V2] User authenticated:",
       userId ? `User ID: ${userId}` : "No user ID"
     );
 
     if (!userId) {
-      console.log("❌ [CHAT API] Authentication failed - no userId");
+      console.log("❌ [CHAT API V2] Authentication failed - no userId");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("📝 [CHAT API] Parsing request body...");
-    const { messages, chatId } = await req.json();
-    console.log("✅ [CHAT API] Request parsed:", {
+    // Check for chatId in URL query parameters (sent by AI SDK useChat hook)
+    const url = new URL(req.url);
+    const chatIdFromQuery = url.searchParams.get("chatId");
+
+    console.log("📝 [CHAT API V2] Parsing request body...");
+    const {
+      messages,
+      chatId: chatIdFromBody,
+    }: { messages: UIMessage[]; chatId?: string } = await req.json();
+
+    // Use chatId from query parameters first, then from body
+    const chatId = chatIdFromQuery || chatIdFromBody;
+
+    console.log("✅ [CHAT API V2] Request parsed:", {
       messagesCount: messages?.length || 0,
-      chatId: chatId || "No chatId",
+      chatIdFromQuery: chatIdFromQuery || "No chatId from query",
+      chatIdFromBody: chatIdFromBody || "No chatId from body",
+      finalChatId: chatId || "No chatId",
       lastMessage:
-        messages?.[messages.length - 1]?.content?.substring(0, 50) + "..." ||
-        "No messages",
+        messages?.length > 0 ? "Last message received" : "No messages",
     });
 
     // Validate messages array
     if (!Array.isArray(messages) || messages.length === 0) {
-      console.log("❌ [CHAT API] Invalid messages array");
+      console.log("❌ [CHAT API V2] Invalid messages array");
       return NextResponse.json({ error: "Invalid messages" }, { status: 400 });
     }
 
-    // Save user message to database if chatId exists
-    if (chatId && messages.length > 0) {
-      console.log("💾 [CHAT API] Saving user message to database...");
-      const client = await clientPromise;
-      const db = client.db("chatgpt-clone");
-      console.log("✅ [CHAT API] Database connection established");
-
-      const userMessage = messages[messages.length - 1];
-      if (userMessage.role === "user") {
-        console.log("💾 [CHAT API] Inserting user message:", {
-          chatId,
-          userId,
-          content: userMessage.content.substring(0, 100) + "...",
-          role: userMessage.role,
-        });
-
-        const insertResult = await db.collection("messages").insertOne({
-          chatId,
-          userId,
-          content: userMessage.content,
-          role: userMessage.role,
-          timestamp: new Date(),
-        });
-
-        console.log(
-          "✅ [CHAT API] User message saved with ID:",
-          insertResult.insertedId
-        );
-      } else {
-        console.log("⏭️ [CHAT API] Skipping message save - not a user message");
-      }
+    // Create new chat if no chatId provided
+    let finalChatId = chatId;
+    if (!finalChatId) {
+      console.log("🆕 [CHAT API V2] Creating new chat...");
+      finalChatId = await createChatInDB(userId, "New Chat");
+      console.log("✅ [CHAT API V2] New chat created:", finalChatId);
     } else {
-      console.log(
-        "⏭️ [CHAT API] Skipping database save - no chatId or messages"
-      );
+      // Verify chat exists and belongs to user
+      const exists = await chatExists(finalChatId, userId);
+      if (!exists) {
+        console.log("❌ [CHAT API V2] Chat not found or access denied");
+        return NextResponse.json({ error: "Chat not found" }, { status: 404 });
+      }
     }
 
-    console.log("🤖 [CHAT API] Preparing LLM request...");
+    console.log("🤖 [CHAT API V2] Preparing LLM request...");
 
     // Get LLM service and validate
     const llmService = getLLMService();
@@ -84,7 +74,7 @@ export async function POST(req: Request) {
 
     if (!validation.valid) {
       console.log(
-        "❌ [CHAT API] LLM provider validation failed:",
+        "❌ [CHAT API V2] LLM provider validation failed:",
         validation.error
       );
       return NextResponse.json(
@@ -96,30 +86,44 @@ export async function POST(req: Request) {
     const model = getCurrentModel();
     const config = llmService.getConfig();
 
-    console.log("📝 [CHAT API] LLM Configuration:", {
+    console.log("📝 [CHAT API V2] LLM Configuration:", {
       provider: config.provider,
       model: config.model,
       messageCount: messages?.length || 0,
     });
 
-    console.log("📝 [CHAT API] Raw messages:", messages);
-
-    console.log("✅ [CHAT API] Messages formatted for LLM:", {
-      messageCount: messages?.length || 0,
+    // Convert UI messages to model messages for the LLM
+    const modelMessages = convertToModelMessages(messages);
+    console.log("✅ [CHAT API V2] Messages converted for LLM:", {
+      messageCount: modelMessages?.length || 0,
     });
 
     // Stream response from LLM
-    console.log("🔄 [CHAT API] Calling LLM streamText...");
+    console.log("🔄 [CHAT API V2] Calling LLM streamText...");
     const result = await streamText({
       model,
-      messages: messages || [],
+      messages: modelMessages,
     });
-    console.log("✅ [CHAT API] LLM stream created successfully");
+    console.log("✅ [CHAT API V2] LLM stream created successfully");
 
-    console.log("📤 [CHAT API] Returning streaming response");
-    return result.toTextStreamResponse();
+    console.log(
+      "📤 [CHAT API V2] Returning streaming response with persistence"
+    );
+    return result.toUIMessageStreamResponse({
+      originalMessages: messages,
+      onFinish: async ({ messages: finalMessages }) => {
+        try {
+          console.log("💾 [CHAT API V2] Saving messages to database...");
+          await saveChatMessages(finalChatId!, userId, finalMessages);
+          console.log("✅ [CHAT API V2] Messages saved successfully");
+        } catch (error) {
+          console.error("💥 [CHAT API V2] Failed to save messages:", error);
+          // Don't throw here to avoid breaking the stream
+        }
+      },
+    });
   } catch (error) {
-    console.error("💥 [CHAT API] Error occurred:", {
+    console.error("💥 [CHAT API V2] Error occurred:", {
       message: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : "No stack trace",
       timestamp: new Date().toISOString(),

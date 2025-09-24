@@ -1,0 +1,45 @@
+"use client";
+
+import React from "react";
+import { useUser } from "@clerk/nextjs";
+import { cn } from "@/lib/utils";
+
+interface SidebarFooterProps {
+  isCollapsed: boolean;
+}
+
+export function SidebarFooter({ isCollapsed }: SidebarFooterProps) {
+  const { user } = useUser();
+
+  return (
+    <div
+      className={cn("border-t border-gray-100", isCollapsed ? "lg:p-2" : "p-3")}
+    >
+      <button
+        className={cn(
+          "w-full flex items-center gap-3 hover:bg-gray-100 rounded-lg transition-colors",
+          isCollapsed ? "lg:justify-center lg:p-1 px-3 py-2" : "px-3 py-2"
+        )}
+        onClick={() => {
+          console.log("User profile clicked");
+        }}
+      >
+        <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+          {user?.firstName?.charAt(0) ||
+            user?.emailAddresses[0]?.emailAddress?.charAt(0) ||
+            "N"}
+        </div>
+        {!isCollapsed && (
+          <div className="flex-1 text-left">
+            <div className="text-sm font-medium text-gray-900">
+              {user?.firstName ||
+                user?.emailAddresses[0]?.emailAddress ||
+                "User"}
+            </div>
+            <div className="text-xs text-gray-500">Free</div>
+          </div>
+        )}
+      </button>
+    </div>
+  );
+}

@@ -1,10 +1,9 @@
 "use client";
 
 import React from "react";
-import { UserIcon, BotIcon, CopyIcon } from "lucide-react";
+import { BotIcon, CopyIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Message } from "@/types/chat";
-import { cn } from "@/lib/utils";
 
 interface MessageItemProps {
   message: Message;

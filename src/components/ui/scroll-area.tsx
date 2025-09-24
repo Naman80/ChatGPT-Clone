@@ -11,7 +11,22 @@ const ScrollArea = React.forwardRef<
     className={cn("relative overflow-hidden", className)}
     {...props}
   >
-    <div className="h-full w-full overflow-auto">{children}</div>
+    <div
+      className={cn(
+        "h-full w-full overflow-auto",
+        "[&::-webkit-scrollbar]:w-2",
+        "[&::-webkit-scrollbar-track]:bg-transparent",
+        "[&::-webkit-scrollbar-thumb]:bg-gray-300",
+        "[&::-webkit-scrollbar-thumb]:rounded-full",
+        "[&::-webkit-scrollbar-thumb:hover]:bg-gray-400"
+      )}
+      style={{
+        scrollbarWidth: "thin",
+        scrollbarColor: "#d1d5db transparent",
+      }}
+    >
+      {children}
+    </div>
   </div>
 ));
 ScrollArea.displayName = "ScrollArea";
