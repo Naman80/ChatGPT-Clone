@@ -14,13 +14,20 @@ export interface Chat {
   updatedAt: Date;
 }
 
-export interface ChatContextType2 {
+export interface ChatContextType {
   chats: Chat[];
   currentChat: Chat | null;
   isLoading: boolean;
-  createChat: () => void;
+  isLoadingMessages: boolean;
+  createChat: () => Promise<Chat | undefined>;
   selectChat: (chatId: string) => void;
-  deleteChat: (chatId: string) => void;
+  deleteChat: (chatId: string) => Promise<void>;
   sendMessage: (content: string) => Promise<void>;
+  addMessageOptimistically: (
+    chatId: string,
+    content: string,
+    role?: "user" | "assistant"
+  ) => string;
+  updateMessage: (chatId: string, messageId: string, content: string) => void;
   clearChats: () => void;
 }

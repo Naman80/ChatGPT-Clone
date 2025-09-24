@@ -5,8 +5,10 @@ import React, {
   useContext,
   useReducer,
   useCallback,
+  useEffect,
 } from "react";
 import { Chat, Message, ChatContextType } from "@/types/chat";
+import { useUser } from "@clerk/nextjs";
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
@@ -14,10 +16,17 @@ interface ChatState {
   chats: Chat[];
   currentChat: Chat | null;
   isLoading: boolean;
+  isLoadingMessages: boolean;
+  loadingChatIds: Set<string>; // Track which chats are currently being loaded
 }
 
 type ChatAction =
   | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_LOADING_MESSAGES"; payload: boolean }
+  | {
+      type: "SET_LOADING_CHAT";
+      payload: { chatId: string; isLoading: boolean };
+    }
   | { type: "SET_CHATS"; payload: Chat[] }
   | { type: "ADD_CHAT"; payload: Chat }
   | { type: "SET_CURRENT_CHAT"; payload: Chat | null }
@@ -34,6 +43,19 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
   switch (action.type) {
     case "SET_LOADING":
       return { ...state, isLoading: action.payload };
+
+    case "SET_LOADING_MESSAGES":
+      return { ...state, isLoadingMessages: action.payload };
+
+    case "SET_LOADING_CHAT": {
+      const newLoadingIds = new Set(state.loadingChatIds);
+      if (action.payload.isLoading) {
+        newLoadingIds.add(action.payload.chatId);
+      } else {
+        newLoadingIds.delete(action.payload.chatId);
+      }
+      return { ...state, loadingChatIds: newLoadingIds };
+    }
 
     case "SET_CHATS":
       return { ...state, chats: action.payload };
@@ -68,11 +90,30 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
       return {
         ...state,
         chats: state.chats.map((chat) =>
-          chat.id === action.payload.id ? action.payload : chat
+          chat.id === action.payload.id
+            ? {
+                ...chat,
+                ...action.payload,
+                // Ensure we preserve existing properties and explicitly handle messages
+                title: action.payload.title ?? chat.title,
+                createdAt: action.payload.createdAt ?? chat.createdAt,
+                updatedAt: action.payload.updatedAt ?? chat.updatedAt,
+                messages: action.payload.messages ?? chat.messages,
+              }
+            : chat
         ),
         currentChat:
           state.currentChat?.id === action.payload.id
-            ? action.payload
+            ? {
+                ...state.currentChat,
+                ...action.payload,
+                title: action.payload.title ?? state.currentChat.title,
+                createdAt:
+                  action.payload.createdAt ?? state.currentChat.createdAt,
+                updatedAt:
+                  action.payload.updatedAt ?? state.currentChat.updatedAt,
+                messages: action.payload.messages ?? state.currentChat.messages,
+              }
             : state.currentChat,
       };
 
@@ -141,125 +182,247 @@ const chatReducer = (state: ChatState, action: ChatAction): ChatState => {
 };
 
 const initialState: ChatState = {
-  chats: [
-    {
-      id: "1",
-      title: "AI UI code prompt",
-      messages: [
-        {
-          id: "1-1",
-          content: "Help me create a modern UI component for a chat interface",
-          role: "user",
-          timestamp: new Date(Date.now() - 3600000), // 1 hour ago
-        },
-        {
-          id: "1-2",
-          content:
-            "I'd be happy to help you create a modern UI component for a chat interface! Here's a comprehensive approach...",
-          role: "assistant",
-          timestamp: new Date(Date.now() - 3590000),
-        },
-      ],
-      createdAt: new Date(Date.now() - 3600000),
-      updatedAt: new Date(Date.now() - 3590000),
-    },
-    {
-      id: "2",
-      title: "ChatGPT clone doc generation",
-      messages: [
-        {
-          id: "2-1",
-          content: "Generate documentation for a ChatGPT clone application",
-          role: "user",
-          timestamp: new Date(Date.now() - 7200000), // 2 hours ago
-        },
-      ],
-      createdAt: new Date(Date.now() - 7200000),
-      updatedAt: new Date(Date.now() - 7200000),
-    },
-    {
-      id: "3",
-      title: "Scalable architecture flow",
-      messages: [],
-      createdAt: new Date(Date.now() - 10800000), // 3 hours ago
-      updatedAt: new Date(Date.now() - 10800000),
-    },
-    {
-      id: "4",
-      title: "ChatGPT client design",
-      messages: [],
-      createdAt: new Date(Date.now() - 86400000), // 1 day ago
-      updatedAt: new Date(Date.now() - 86400000),
-    },
-    {
-      id: "5",
-      title: "Create GitHub profile page",
-      messages: [],
-      createdAt: new Date(Date.now() - 172800000), // 2 days ago
-      updatedAt: new Date(Date.now() - 172800000),
-    },
-    {
-      id: "6",
-      title: "Email/Interview answers",
-      messages: [],
-      createdAt: new Date(Date.now() - 259200000), // 3 days ago
-      updatedAt: new Date(Date.now() - 259200000),
-    },
-    {
-      id: "7",
-      title: "BACKEND CONCEPTS",
-      messages: [],
-      createdAt: new Date(Date.now() - 604800000), // 1 week ago
-      updatedAt: new Date(Date.now() - 604800000),
-    },
-    {
-      id: "8",
-      title: "Simplifying Cassandra expla...",
-      messages: [],
-      createdAt: new Date(Date.now() - 1209600000), // 2 weeks ago
-      updatedAt: new Date(Date.now() - 1209600000),
-    },
-  ],
+  chats: [],
   currentChat: null,
   isLoading: false,
-};
-
-// Mock AI response function - in a real app, this would call your AI service
-const mockAIResponse = async (userMessage: string): Promise<string> => {
-  // Simulate network delay
-  await new Promise((resolve) =>
-    setTimeout(resolve, 1000 + Math.random() * 2000)
-  );
-
-  const responses = [
-    "I understand what you're asking about. Let me help you with that.",
-    "That's an interesting question! Here's what I think about it:",
-    "Based on your message, I can provide some insights:",
-    "Thank you for sharing that. Here's my perspective:",
-    "I'd be happy to help you with this topic. Let me explain:",
-  ];
-
-  const randomResponse =
-    responses[Math.floor(Math.random() * responses.length)];
-  return `${randomResponse} You mentioned: "${userMessage}". This is a simulated response that would normally come from an AI service. In a real implementation, this would be replaced with actual AI API calls.`;
+  isLoadingMessages: false,
+  loadingChatIds: new Set(),
 };
 
 interface ChatProviderProps {
   children: React.ReactNode;
+  chatId?: string;
 }
 
-export function ChatProvider({ children }: ChatProviderProps) {
+export function ChatProvider({ children, chatId }: ChatProviderProps) {
   const [state, dispatch] = useReducer(chatReducer, initialState);
+  const { user, isLoaded } = useUser();
 
-  const createChat = useCallback(() => {
-    const newChat: Chat = {
-      id: Date.now().toString(),
-      title: "New Chat",
-      messages: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    dispatch({ type: "ADD_CHAT", payload: newChat });
+  console.log("[ChatProvider] Initialized with:", {
+    chatId,
+    hasUser: !!user,
+    isLoaded,
+    userId: user?.id,
+  });
+
+  // Load chats from API on mount
+  useEffect(() => {
+    if (isLoaded && user?.id) {
+      console.log(
+        "[ChatContext] User authenticated and loaded, loading chats for:",
+        user.id
+      );
+      loadChats();
+    } else {
+      console.log("[ChatContext] User not authenticated or not loaded yet:", {
+        isLoaded,
+        userId: user?.id,
+      });
+    }
+  }, [isLoaded, user?.id]);
+
+  // Load messages for a specific chat
+  const loadMessagesForChat = useCallback(
+    async (chatId: string) => {
+      // Prevent loading the same chat multiple times simultaneously
+      if (state.loadingChatIds.has(chatId)) {
+        console.log(
+          `[ChatContext] Already loading messages for chat: ${chatId}, skipping`
+        );
+        return;
+      }
+
+      try {
+        console.log(`[ChatContext] Loading messages for chat: ${chatId}`);
+
+        // Add to loading set
+        const newLoadingIds = new Set(state.loadingChatIds);
+        newLoadingIds.add(chatId);
+        dispatch({
+          type: "SET_LOADING_CHAT",
+          payload: { chatId, isLoading: true },
+        });
+        dispatch({ type: "SET_LOADING_MESSAGES", payload: true });
+
+        const response = await fetch(`/api/messages?chatId=${chatId}`);
+        if (response.ok) {
+          const fetchedMessages = await response.json();
+          console.log(
+            `[ChatContext] Fetched ${fetchedMessages.length} messages for chat ${chatId}:`,
+            fetchedMessages
+          );
+
+          const formattedMessages = fetchedMessages.map(
+            (msg: {
+              _id?: string;
+              id?: string;
+              content: string;
+              role: string;
+              timestamp: string;
+            }) => ({
+              id: msg._id || msg.id,
+              content: msg.content,
+              role: msg.role,
+              timestamp: new Date(msg.timestamp),
+              isStreaming: false,
+            })
+          );
+
+          console.log(`[ChatContext] Formatted messages:`, formattedMessages);
+
+          // Update the current chat with messages
+          const updatePayload = {
+            id: chatId,
+            messages: formattedMessages,
+          };
+          console.log(
+            `[ChatContext] Dispatching UPDATE_CHAT with:`,
+            updatePayload
+          );
+
+          dispatch({
+            type: "UPDATE_CHAT",
+            payload: updatePayload as Chat,
+          });
+
+          console.log(
+            `[ChatContext] Successfully updated chat ${chatId} with ${formattedMessages.length} messages`
+          );
+        }
+      } catch (error) {
+        console.error("Failed to load messages for chat:", error);
+      } finally {
+        // Remove from loading set
+        dispatch({
+          type: "SET_LOADING_CHAT",
+          payload: { chatId, isLoading: false },
+        });
+        dispatch({ type: "SET_LOADING_MESSAGES", payload: false });
+      }
+    },
+    [state.loadingChatIds]
+  );
+
+  // Load specific chat when chatId is provided
+  useEffect(() => {
+    console.log(`[ChatContext] useEffect triggered with:`, {
+      chatId,
+      hasChats: state.chats.length > 0,
+      chatsCount: state.chats.length,
+      currentChatId: state.currentChat?.id,
+    });
+
+    if (chatId && state.chats.length > 0) {
+      const targetChat = state.chats.find((chat) => chat.id === chatId);
+      console.log(
+        `[ChatContext] Looking for chat ${chatId}, found:`,
+        !!targetChat
+      );
+
+      if (targetChat) {
+        console.log(`[ChatContext] Setting current chat to: ${chatId}`);
+
+        // Only set as current if it's different from the current chat
+        if (!state.currentChat || state.currentChat.id !== chatId) {
+          dispatch({ type: "SET_CURRENT_CHAT", payload: targetChat });
+        }
+
+        // Load messages if this chat doesn't have any messages yet
+        if (!targetChat.messages || targetChat.messages.length === 0) {
+          console.log(`[ChatContext] Loading messages for new chat: ${chatId}`);
+          loadMessagesForChat(chatId);
+        }
+      }
+    }
+  }, [chatId, state.chats, loadMessagesForChat]);
+
+  // Load messages for current chat if we don't have any (handles page refresh when no chatId in URL)
+  useEffect(() => {
+    // Only load if we have a current chat, no messages, not already loading, and no explicit chatId from URL
+    if (
+      !chatId &&
+      state.currentChat &&
+      state.chats.length > 0 &&
+      (!state.currentChat.messages ||
+        state.currentChat.messages.length === 0) &&
+      !state.isLoadingMessages
+    ) {
+      // Double check that this chat actually exists in our chats list to avoid loading deleted chats
+      const chatExists = state.chats.some(
+        (chat) => chat.id === state.currentChat!.id
+      );
+      if (chatExists) {
+        console.log(
+          `[ChatContext] Loading messages for current chat (no URL chatId): ${state.currentChat.id}`
+        );
+        loadMessagesForChat(state.currentChat.id);
+      }
+    }
+  }, [
+    chatId,
+    state.currentChat?.id,
+    state.chats.length,
+    state.isLoadingMessages,
+    loadMessagesForChat,
+  ]);
+
+  const loadChats = async () => {
+    try {
+      console.log("[ChatContext] Starting to load chats...");
+      dispatch({ type: "SET_LOADING", payload: true });
+
+      // Fetch chats
+      const response = await fetch("/api/chats");
+
+      console.log("[ChatContext] API response status:", response.status);
+
+      if (response.status === 401) {
+        console.error("[ChatContext] Unauthorized - user not authenticated");
+        return;
+      }
+
+      if (response.ok) {
+        const chats = await response.json();
+        console.log("[ChatContext] Successfully loaded chats:", {
+          count: chats.length,
+          chatIds: chats.map((c: Chat) => c.id),
+        });
+        dispatch({ type: "SET_CHATS", payload: chats });
+        console.log("[ChatContext] Chats dispatched to state");
+      } else {
+        const errorText = await response.text();
+        console.error(
+          "[ChatContext] Failed to load chats:",
+          response.status,
+          errorText
+        );
+      }
+    } catch (error) {
+      console.error("[ChatContext] Error loading chats:", error);
+    } finally {
+      dispatch({ type: "SET_LOADING", payload: false });
+    }
+  };
+
+  const createChat = useCallback(async (): Promise<Chat | undefined> => {
+    try {
+      const response = await fetch("/api/chats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "New Chat" }),
+      });
+
+      if (response.ok) {
+        const newChat = await response.json();
+        dispatch({ type: "ADD_CHAT", payload: newChat });
+        // Navigate to the new chat using window.history
+        window.history.pushState({}, "", `/c/${newChat.id}`);
+        return newChat;
+      }
+    } catch (error) {
+      console.error("Failed to create chat:", error);
+    }
+    return undefined;
   }, []);
 
   const selectChat = useCallback(
@@ -272,129 +435,53 @@ export function ChatProvider({ children }: ChatProviderProps) {
     [state.chats]
   );
 
-  const deleteChat = useCallback((chatId: string) => {
-    dispatch({ type: "DELETE_CHAT", payload: chatId });
+  const deleteChat = useCallback(async (chatId: string): Promise<void> => {
+    try {
+      const response = await fetch(`/api/chats/${chatId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        dispatch({ type: "DELETE_CHAT", payload: chatId });
+      }
+    } catch (error) {
+      console.error("Failed to delete chat:", error);
+    }
   }, []);
 
-  const sendMessage = useCallback(
-    async (content: string) => {
-      if (!state.currentChat) {
-        // Create a new chat if none exists
-        const newChat: Chat = {
-          id: Date.now().toString(),
-          title: content.slice(0, 50) + (content.length > 50 ? "..." : ""),
-          messages: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-        dispatch({ type: "ADD_CHAT", payload: newChat });
+  const sendMessage = useCallback(async (content: string): Promise<void> => {
+    // This is a placeholder - actual sending will be handled by the Vercel AI SDK hook
+    console.log("Sending message:", content);
+  }, []);
 
-        // Add user message
-        const userMessage: Message = {
-          id: Date.now().toString(),
-          content,
-          role: "user",
-          timestamp: new Date(),
-        };
-        dispatch({
-          type: "ADD_MESSAGE",
-          payload: { chatId: newChat.id, message: userMessage },
-        });
+  const addMessageOptimistically = useCallback(
+    (chatId: string, content: string, role: "user" | "assistant" = "user") => {
+      const optimisticMessage: Message = {
+        id: `temp-${Date.now()}-${Math.random()}`,
+        content,
+        role,
+        timestamp: new Date(),
+        isStreaming: role === "assistant",
+      };
 
-        // Add streaming assistant message
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: "",
-          role: "assistant",
-          timestamp: new Date(),
-          isStreaming: true,
-        };
-        dispatch({
-          type: "ADD_MESSAGE",
-          payload: { chatId: newChat.id, message: assistantMessage },
-        });
+      dispatch({
+        type: "ADD_MESSAGE",
+        payload: { chatId, message: optimisticMessage },
+      });
 
-        // Simulate streaming response
-        try {
-          const response = await mockAIResponse(content);
-          dispatch({
-            type: "UPDATE_MESSAGE",
-            payload: {
-              chatId: newChat.id,
-              messageId: assistantMessage.id,
-              content: response,
-            },
-          });
-        } catch (error) {
-          dispatch({
-            type: "UPDATE_MESSAGE",
-            payload: {
-              chatId: newChat.id,
-              messageId: assistantMessage.id,
-              content: "Sorry, there was an error processing your request.",
-            },
-          });
-        }
-      } else {
-        // Add to existing chat
-        const userMessage: Message = {
-          id: Date.now().toString(),
-          content,
-          role: "user",
-          timestamp: new Date(),
-        };
-        dispatch({
-          type: "ADD_MESSAGE",
-          payload: { chatId: state.currentChat.id, message: userMessage },
-        });
-
-        // Add streaming assistant message
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: "",
-          role: "assistant",
-          timestamp: new Date(),
-          isStreaming: true,
-        };
-        dispatch({
-          type: "ADD_MESSAGE",
-          payload: { chatId: state.currentChat.id, message: assistantMessage },
-        });
-
-        // Update chat title if it's the first message
-        if (state.currentChat.messages.length === 0) {
-          const updatedChat = {
-            ...state.currentChat,
-            title: content.slice(0, 50) + (content.length > 50 ? "..." : ""),
-            updatedAt: new Date(),
-          };
-          dispatch({ type: "UPDATE_CHAT", payload: updatedChat });
-        }
-
-        // Simulate streaming response
-        try {
-          const response = await mockAIResponse(content);
-          dispatch({
-            type: "UPDATE_MESSAGE",
-            payload: {
-              chatId: state.currentChat.id,
-              messageId: assistantMessage.id,
-              content: response,
-            },
-          });
-        } catch (error) {
-          dispatch({
-            type: "UPDATE_MESSAGE",
-            payload: {
-              chatId: state.currentChat.id,
-              messageId: assistantMessage.id,
-              content: "Sorry, there was an error processing your request.",
-            },
-          });
-        }
-      }
+      return optimisticMessage.id;
     },
-    [state.currentChat]
+    []
+  );
+
+  const updateMessage = useCallback(
+    (chatId: string, messageId: string, content: string) => {
+      dispatch({
+        type: "UPDATE_MESSAGE",
+        payload: { chatId, messageId, content },
+      });
+    },
+    []
   );
 
   const clearChats = useCallback(() => {
@@ -405,10 +492,13 @@ export function ChatProvider({ children }: ChatProviderProps) {
     chats: state.chats,
     currentChat: state.currentChat,
     isLoading: state.isLoading,
+    isLoadingMessages: state.isLoadingMessages,
     createChat,
     selectChat,
     deleteChat,
     sendMessage,
+    addMessageOptimistically,
+    updateMessage,
     clearChats,
   };
 

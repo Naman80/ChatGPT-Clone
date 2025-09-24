@@ -7,8 +7,10 @@ import { useChat } from "@/contexts/ChatContext";
 import { cn } from "@/lib/utils";
 
 export function ChatInput() {
-  const { sendMessage, isLoading } = useChat();
+  const { currentChat, createChat, addMessageOptimistically, updateMessage } =
+    useChat();
   const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize textarea with fixed max height
@@ -33,16 +35,94 @@ export function ChatInput() {
 
     const messageToSend = message.trim();
     setMessage("");
+    setIsLoading(true);
+
+    // Create new chat if none exists
+    let chatToUse = currentChat;
+    if (!chatToUse) {
+      const newChat = await createChat();
+      if (!newChat) {
+        setIsLoading(false);
+        return;
+      }
+      chatToUse = newChat;
+    }
 
     // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
 
+    // Add user message optimistically
+    const userMessageId = addMessageOptimistically(
+      chatToUse.id,
+      messageToSend,
+      "user"
+    );
+
     try {
-      await sendMessage(messageToSend);
+      // Send message to our API which will handle the AI response
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "user",
+              content: messageToSend,
+            },
+          ],
+          chatId: chatToUse.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send message");
+      }
+
+      // Add assistant message optimistically for streaming
+      const assistantMessageId = addMessageOptimistically(
+        chatToUse.id,
+        "",
+        "assistant"
+      );
+
+      // Handle streaming response
+      const reader = response.body?.getReader();
+      if (reader) {
+        let aiResponse = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = new TextDecoder().decode(value);
+          aiResponse += chunk;
+
+          // Update the assistant message with streaming content
+          updateMessage(chatToUse.id, assistantMessageId, aiResponse);
+        }
+
+        // Mark as complete (no longer streaming)
+        updateMessage(chatToUse.id, assistantMessageId, aiResponse);
+
+        // Save AI response to database
+        await fetch("/api/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chatId: chatToUse.id,
+            content: aiResponse,
+            role: "assistant",
+          }),
+        });
+      }
     } catch (error) {
       console.error("Failed to send message:", error);
+      // TODO: Show error message to user
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -79,7 +159,7 @@ export function ChatInput() {
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               placeholder="Ask anything"
-              className="w-full resize-none border-0 outline-none text-base leading-6 placeholder-gray-500 bg-transparent min-h-[24px] py-2"
+              className="w-full resize-none border-0 outline-none text-base leading-6 placeholder-gray-500 bg-transparent min-h-[24px] py-2 text-black caret-black"
               rows={1}
               disabled={isLoading}
             />

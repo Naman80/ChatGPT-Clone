@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { Sidebar, SidebarToggle } from "./Sidebar";
+import { Sidebar } from "./Sidebar";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 import { ChatProvider, useChat } from "@/contexts/ChatContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { MenuIcon, Sparkles, MoreVertical } from "lucide-react";
+import { MenuIcon, MoreVertical } from "lucide-react";
 
 function ChatInterfaceContent() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
@@ -40,15 +40,6 @@ function ChatInterfaceContent() {
             className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2"
           >
             <MenuIcon className="h-6 w-6" />
-          </Button>
-
-          <Button
-            variant="default"
-            size="sm"
-            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 py-2 rounded-full flex items-center gap-2"
-          >
-            <Sparkles className="h-4 w-4" />
-            Upgrade to Go
           </Button>
 
           <Button
@@ -100,9 +91,11 @@ function ChatInterfaceContent() {
   );
 }
 
-export function ChatInterface() {
+export function ChatInterface({ chatId }: { chatId?: string }) {
+  console.log("[ChatInterface] Received chatId:", chatId);
+
   return (
-    <ChatProvider>
+    <ChatProvider chatId={chatId}>
       <ChatInterfaceContent />
     </ChatProvider>
   );
