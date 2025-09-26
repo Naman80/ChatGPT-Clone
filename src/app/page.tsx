@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@clerk/nextjs/server";
-import { generateId } from "ai";
+import { ChatListProvider } from "@/contexts/ChatListContext";
+import { ChatContainer } from "@/components/chat";
 
 export default async function Home() {
   const user = await currentUser();
@@ -9,8 +10,9 @@ export default async function Home() {
     redirect("/sign-in");
   }
 
-  const chatId = generateId();
-
-  // Redirect authenticated users to the chat interface
-  redirect("/c/" + chatId);
+  return (
+    <ChatListProvider>
+      <ChatContainer />
+    </ChatListProvider>
+  );
 }

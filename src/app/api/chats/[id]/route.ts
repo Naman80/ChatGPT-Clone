@@ -1,10 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import {
-  loadChatFromDB,
-  deleteChatFromDB,
-  updateChatTitle,
-} from "@/lib/chat-db";
+import { loadChatFromDB } from "@/lib/chat-db";
 
 export async function GET(
   req: Request,
@@ -58,4 +54,3 @@ export async function GET(
     );
   }
 }
-

@@ -7,20 +7,68 @@ import { ChatView } from "./ChatView";
 import { Sidebar } from "../sidebar-components";
 import { NewChatInput } from "../input";
 import { ChatHeader } from "./ChatHeader";
-import { DefaultChatTransport } from "ai";
+import { DefaultChatTransport, UIMessage } from "ai";
 
 interface ChatContainerProps {
   chatId?: string;
 }
 
 export function ChatContainer({ chatId }: ChatContainerProps) {
-  // const { setCurrentChatId, createNewChat, chats } = useChatList();
+  console.log(chatId);
+  const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
+  const [loading, setLoading] = useState<boolean>(!!chatId); // Only load if chatId exists
+  const [error, setError] = useState<string | null>(null);
 
+  // Fetch initial messages when chatId is present
+  useEffect(() => {
+    if (!chatId) {
+      setLoading(false);
+      setInitialMessages([]);
+      return;
+    }
+
+    async function fetchMessages() {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/chats/${chatId}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          setInitialMessages(result.data);
+        } else {
+          setError(result.error || "Failed to fetch messages");
+        }
+      } catch (err) {
+        setError(
+          `An error occurred: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchMessages();
+  }, [chatId]);
+
+  // Initialize useChat with fetched messages
   const { messages, sendMessage, status } = useChat({
+    messages: initialMessages,
     transport: new DefaultChatTransport({
-      api: "/api/chats",
+      api: chatId ? `/api/chats/${chatId}` : `/api/chats`,
     }),
+    onData: (data) => {
+      console.log(data, "data part is received");
+    },
   });
+
+  console.log("meessages", messages, initialMessages);
 
   // Show sidebar by default on desktop when there are chats, collapse on mobile
   // Start with collapsed state to avoid hydration mismatch, then adjust on client
@@ -222,7 +270,7 @@ export function ChatContainer({ chatId }: ChatContainerProps) {
         <NewChatInput
           onSubmit={(data) => {
             console.log(data);
-            sendMessage({ text: data })
+            sendMessage({ text: data });
           }}
           isLoading={status === "submitted" || status === "streaming"}
         />

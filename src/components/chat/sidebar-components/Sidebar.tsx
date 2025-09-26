@@ -24,6 +24,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     deleteChat,
     updateChatTitle,
   } = useChatList();
+
   const router = useRouter();
   const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState("");

@@ -47,54 +47,47 @@ export async function GET() {
   }
 }
 
-// export async function POST(req: Request) {
-//   console.log("🚀 [CHATS API V2] Starting POST request to create new chat");
+export async function POST(req: Request) {
+  console.log(req, "this is req of post fnction");
+  console.log("🚀 [CHATS API V2] Starting POST request to create new chat");
 
-//   try {
-//     console.log("🔐 [CHATS API V2] Authenticating user...");
-//     const { userId } = await auth();
+  try {
+    console.log("🔐 [CHATS API V2] Authenticating user...");
+    const { userId } = await auth();
 
-//     if (!userId) {
-//       console.log("❌ [CHATS API V2] Authentication failed - no userId");
-//       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-//     }
+    if (!userId) {
+      console.log("❌ [CHATS API V2] Authentication failed - no userId");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-//     console.log("📝 [CHATS API V2] Parsing request body...");
+    console.log("🆕 [CHATS API V2] Creating new chat...");
 
-//     const { title } = await req.json();
+    const chatId = await createChatInDB(userId, "New Chat");
 
-//     console.log("✅ [CHATS API V2] Request parsed:", {
-//       title: title || "No title provided",
-//     });
+    console.log("✅ [CHATS API V2] Chat created with ID:", chatId);
 
-//     console.log("🆕 [CHATS API V2] Creating new chat...");
+    const responseData = {
+      id: chatId,
+      title: "New Chat",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
 
-//     const chatId = await createChatInDB(userId, title || "New Chat");
+    console.log("📤 [CHATS API V2] Returning created chat data");
 
-//     console.log("✅ [CHATS API V2] Chat created with ID:", chatId);
-
-//     const responseData = {
-//       id: chatId,
-//       title: title || "New Chat",
-//       createdAt: new Date(),
-//       updatedAt: new Date(),
-//     };
-
-//     console.log("📤 [CHATS API V2] Returning created chat data");
-
-//     return NextResponse.json(responseData);
-//   } catch (error) {
-//     console.error("💥 [CHATS API V2] POST Error occurred:", {
-//       message: error instanceof Error ? error.message : "Unknown error",
-//       stack: error instanceof Error ? error.stack : "No stack trace",
-//       timestamp: new Date().toISOString(),
-//     });
-//     return NextResponse.json(
-//       { error: "Internal Server Error" },
-//       { status: 500 }
-//     );
-//   }
-// }
+    return NextResponse.json(responseData);
+  } catch (error) {
+    console.error("💥 [CHATS API V2] POST Error occurred:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : "No stack trace",
+      timestamp: new Date().toISOString(),
+    });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function PUT(req: Request) {
   console.log("🚀 [CHAT UPDATE API] Starting PUT request");
