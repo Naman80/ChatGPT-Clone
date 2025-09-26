@@ -13,12 +13,12 @@ export function SidebarFooter({ isCollapsed }: SidebarFooterProps) {
 
   return (
     <div
-      className={cn("border-t border-gray-100", isCollapsed ? "lg:p-2" : "p-3")}
+      className={cn("border-t border-gray-100", isCollapsed ? "lg:p-4" : "p-4")}
     >
       <button
         className={cn(
           "w-full flex items-center gap-3 hover:bg-gray-100 rounded-lg transition-colors",
-          isCollapsed ? "lg:justify-center lg:p-1 px-3 py-2" : "px-3 py-2"
+          isCollapsed ? "lg:justify-center" : ""
         )}
         onClick={() => {
           console.log("User profile clicked");

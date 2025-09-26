@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatList } from "@/contexts/ChatListContext";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { SidebarHeader } from "./SidebarHeader";
 import { SidebarMenu } from "./SidebarMenu";
@@ -25,6 +25,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     updateChatTitle,
   } = useChatList();
   const router = useRouter();
+  const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState("");
   const [hoveredChatId, setHoveredChatId] = useState<string | null>(null);
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
@@ -52,17 +53,20 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const handleNewChat = async () => {
     const newChatId = await createNewChat();
     if (newChatId) {
-      router.push(`/c/${newChatId}`);
+      // Use client-side navigation to avoid full re-render
+      window.history.pushState({}, "", `/c/${newChatId}`);
+      setCurrentChatId(newChatId);
     }
   };
 
   const handleChatSelect = (chatId: string) => {
-    setCurrentChatId(chatId);
-    router.push(`/c/${chatId}`);
-    // Close sidebar on mobile after selecting a chat
-    if (typeof window !== "undefined" && window.innerWidth < 1024) {
-      onToggle();
+    // Only navigate if we're not already on this chat
+    const currentChatIdFromUrl = pathname.split("/c/")[1];
+    if (currentChatIdFromUrl !== chatId) {
+      // Use client-side navigation to avoid full re-render
+      window.history.pushState({}, "", `/c/${chatId}`);
     }
+    setCurrentChatId(chatId);
   };
 
   const handleEditStart = (chatId: string, currentTitle: string) => {
@@ -88,7 +92,9 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     if (window.confirm("Are you sure you want to delete this chat?")) {
       await deleteChat(chatId);
       if (currentChatId === chatId) {
-        router.push("/");
+        // Navigate to the chat interface without a specific chat
+        window.history.pushState({}, "", "/chat");
+        setCurrentChatId(null);
       }
     }
     setShowDropdownId(null);
@@ -119,8 +125,8 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             : "translate-x-0 w-80 lg:w-80" // Mobile open, Desktop open (320px)
         )}
       >
-        <div className="flex flex-col h-full">
-          <SidebarHeader isCollapsed={isCollapsed} onToggle={onToggle} />
+        <div className="flex flex-col h-full justify-between">
+          {!isCollapsed && <SidebarHeader onToggle={onToggle} />}
 
           {/* Menu Items */}
           <div
@@ -141,49 +147,44 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
           {/* Chats Section */}
           {!isCollapsed && (
-            <div className="px-3 py-3">
-              <h3 className="text-xs font-medium text-gray-500 mb-3 px-3">
-                Chats
-              </h3>
+            <div className="p-4 pb-1">
+              <h3 className="text-xs font-medium text-gray-500">Chats</h3>
             </div>
           )}
 
           {/* Chat List */}
-          <div
-            className={cn(
-              "flex-1 overflow-hidden",
-              isCollapsed ? "lg:hidden" : "px-3"
-            )}
-          >
-            <ScrollArea className="h-full">
-              <div className="space-y-1 pb-4">
-                {filteredChats.map((chat) => (
-                  <ChatItem
-                    key={chat.id}
-                    chat={chat}
-                    isActive={currentChatId === chat.id}
-                    isHovered={hoveredChatId === chat.id}
-                    isEditing={editingChatId === chat.id}
-                    editingTitle={editingTitle}
-                    showDropdown={showDropdownId === chat.id}
-                    dropdownRef={dropdownRef}
-                    onSelect={handleChatSelect}
-                    onHover={setHoveredChatId}
-                    onEditStart={handleEditStart}
-                    onEditSave={handleEditSave}
-                    onEditCancel={handleEditCancel}
-                    onTitleChange={setEditingTitle}
-                    onDropdownToggle={(chatId) =>
-                      setShowDropdownId(
-                        showDropdownId === chatId ? null : chatId
-                      )
-                    }
-                    onDelete={handleDeleteChat}
-                  />
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
+          {!isCollapsed && (
+            <div className={cn("flex-1 overflow-hidden p-3")}>
+              <ScrollArea className="h-full">
+                <div className="space-y-1 pb-4">
+                  {filteredChats.map((chat) => (
+                    <ChatItem
+                      key={chat.id}
+                      chat={chat}
+                      isActive={currentChatId === chat.id}
+                      isHovered={hoveredChatId === chat.id}
+                      isEditing={editingChatId === chat.id}
+                      editingTitle={editingTitle}
+                      showDropdown={showDropdownId === chat.id}
+                      dropdownRef={dropdownRef}
+                      onSelect={handleChatSelect}
+                      onHover={setHoveredChatId}
+                      onEditStart={handleEditStart}
+                      onEditSave={handleEditSave}
+                      onEditCancel={handleEditCancel}
+                      onTitleChange={setEditingTitle}
+                      onDropdownToggle={(chatId) =>
+                        setShowDropdownId(
+                          showDropdownId === chatId ? null : chatId
+                        )
+                      }
+                      onDelete={handleDeleteChat}
+                    />
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
 
           <SidebarFooter isCollapsed={isCollapsed} />
         </div>

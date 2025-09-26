@@ -1,10 +1,16 @@
-import { UIMessage } from "ai";
+import { MongoClient, Db, Collection } from "mongodb";
+import { generateId, UIMessage } from "ai";
 import clientPromise from "./mongodb";
 
 /**
  * Chat database operations optimized for Vercel AI SDK
  */
 
+// Constants for database configuration
+const DB_NAME = "chatgpt-clone";
+const COLLECTION_NAME = "chats_v2";
+
+// Interface for ChatDocument (unchanged)
 export interface ChatDocument {
   _id?: string;
   id: string;
@@ -16,18 +22,27 @@ export interface ChatDocument {
 }
 
 /**
+ * Helper function to get the chats collection
+ * @param client - Optional MongoClient; uses clientPromise if not provided
+ */
+async function getChatsCollection(
+  client?: MongoClient
+): Promise<Collection<ChatDocument>> {
+  const mongoClient = client || (await clientPromise);
+  const db: Db = mongoClient.db(DB_NAME);
+  return db.collection<ChatDocument>(COLLECTION_NAME);
+}
+
+/**
  * Create a new chat in the database
  */
 export async function createChatInDB(
   userId: string,
   title: string = "New Chat"
 ): Promise<string> {
-  const client = await clientPromise;
-  const db = client.db("chatgpt-clone");
+  const collection = await getChatsCollection();
 
-  const chatId = `chat_${Date.now()}_${Math.random()
-    .toString(36)
-    .substring(2)}`;
+  const chatId = generateId();
 
   const chatDocument: Omit<ChatDocument, "_id"> = {
     id: chatId,
@@ -38,7 +53,7 @@ export async function createChatInDB(
     updatedAt: new Date(),
   };
 
-  await db.collection("chats_v2").insertOne(chatDocument);
+  await collection.insertOne(chatDocument);
   return chatId;
 }
 
@@ -49,10 +64,9 @@ export async function loadChatFromDB(
   chatId: string,
   userId: string
 ): Promise<UIMessage[]> {
-  const client = await clientPromise;
-  const db = client.db("chatgpt-clone");
+  const collection = await getChatsCollection();
 
-  const chat = await db.collection("chats_v2").findOne<ChatDocument>({
+  const chat = await collection.findOne<ChatDocument>({
     id: chatId,
     userId,
   });
@@ -73,10 +87,9 @@ export async function saveChatMessages(
   userId: string,
   messages: UIMessage[]
 ): Promise<void> {
-  const client = await clientPromise;
-  const db = client.db("chatgpt-clone");
+  const collection = await getChatsCollection();
 
-  const result = await db.collection("chats_v2").updateOne(
+  const result = await collection.updateOne(
     { id: chatId, userId },
     {
       $set: {
@@ -97,15 +110,14 @@ export async function saveChatMessages(
 export async function getUserChats(
   userId: string
 ): Promise<Array<Omit<ChatDocument, "messages">>> {
-  const client = await clientPromise;
-  const db = client.db("chatgpt-clone");
+  const collection = await getChatsCollection();
 
-  const chats = await db
-    .collection<ChatDocument>("chats_v2")
-    .find(
+  const chats = await collection
+    .find<ChatDocument>(
       { userId },
       {
         projection: {
+          userId: 0,
           messages: 0, // Exclude messages for performance
           _id: 0,
         },
@@ -124,10 +136,9 @@ export async function deleteChatFromDB(
   chatId: string,
   userId: string
 ): Promise<void> {
-  const client = await clientPromise;
-  const db = client.db("chatgpt-clone");
+  const collection = await getChatsCollection();
 
-  const result = await db.collection("chats_v2").deleteOne({
+  const result = await collection.deleteOne({
     id: chatId,
     userId,
   });
@@ -145,10 +156,9 @@ export async function updateChatTitle(
   userId: string,
   title: string
 ): Promise<void> {
-  const client = await clientPromise;
-  const db = client.db("chatgpt-clone");
+  const collection = await getChatsCollection();
 
-  const result = await db.collection("chats_v2").updateOne(
+  const result = await collection.updateOne(
     { id: chatId, userId },
     {
       $set: {
@@ -170,10 +180,9 @@ export async function chatExists(
   chatId: string,
   userId: string
 ): Promise<boolean> {
-  const client = await clientPromise;
-  const db = client.db("chatgpt-clone");
+  const collection = await getChatsCollection();
 
-  const count = await db.collection("chats_v2").countDocuments({
+  const count = await collection.countDocuments({
     id: chatId,
     userId,
   });

@@ -5,7 +5,8 @@ import { PlusCircle, MicIcon, ArrowUpIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface NewChatInputProps {
-  onSubmit: (message: string) => Promise<void>;
+  // onSubmit: (message: string) => Promise<void>;
+  onSubmit: (message: string) => void;
   isLoading: boolean;
   disabled?: boolean;
 }
@@ -45,7 +46,7 @@ export function NewChatInput({
     }
 
     try {
-      await onSubmit(messageToSend);
+      onSubmit(messageToSend);
     } catch (error) {
       console.error("Failed to send message:", error);
       setMessage(messageToSend);
@@ -60,9 +61,9 @@ export function NewChatInput({
   };
 
   return (
-    <div className="w-full px-4 py-3">
+    <div className="w-full px-4 py-3 bg-white border-t border-gray-100">
       <form onSubmit={handleSubmit} className="w-full">
-        <div className="bg-white border border-gray-200 rounded-3xl shadow-lg flex items-center p-3 gap-3 max-w-4xl mx-auto">
+        <div className="bg-white border border-gray-200 rounded-3xl shadow-lg flex items-end p-3 gap-2 max-w-4xl mx-auto">
           <Button
             type="button"
             variant="ghost"
@@ -86,31 +87,29 @@ export function NewChatInput({
             />
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="w-10 h-10 rounded-full hover:bg-gray-100 text-gray-600"
-              disabled={disabled}
-            >
-              <MicIcon className="h-5 w-5" />
-            </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="w-10 h-10 rounded-full hover:bg-gray-100 text-gray-600 flex-shrink-0"
+            disabled={disabled}
+          >
+            <MicIcon className="h-5 w-5" />
+          </Button>
 
-            {message.trim() && (
-              <Button
-                type="submit"
-                disabled={isLoading || !message.trim() || disabled}
-                className="w-10 h-10 rounded-full bg-gray-900 hover:bg-gray-800 text-white p-0 disabled:opacity-50"
-              >
-                {isLoading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <ArrowUpIcon className="h-5 w-5" />
-                )}
-              </Button>
-            )}
-          </div>
+          {message.trim() && (
+            <Button
+              type="submit"
+              disabled={isLoading || !message.trim() || disabled}
+              className="w-10 h-10 rounded-full bg-gray-900 hover:bg-gray-800 text-white p-0 disabled:opacity-50 flex-shrink-0"
+            >
+              {isLoading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <ArrowUpIcon className="h-5 w-5" />
+              )}
+            </Button>
+          )}
         </div>
       </form>
     </div>

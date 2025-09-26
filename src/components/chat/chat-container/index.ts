@@ -1,4 +1,4 @@
 export { ChatContainer } from "./ChatContainer";
-export { MobileHeader } from "./MobileHeader";
+export { ChatHeader } from "./ChatHeader";
 export { EmptyState } from "./EmptyState";
 export { ChatView } from "./ChatView";

@@ -9,6 +9,7 @@ interface ChatPageProps {
 
 export default async function ChatPage({ params }: ChatPageProps) {
   const { chatId } = await params;
+
   return (
     <ChatListProvider>
       <ChatContainer chatId={chatId} />

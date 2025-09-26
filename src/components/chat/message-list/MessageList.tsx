@@ -43,8 +43,8 @@ export function MessageList({
 
   // Messages view with improved design
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-gradient-to-br from-gray-50 to-white">
-      <ScrollArea className="flex-1 min-h-0" ref={scrollAreaRef}>
+    <div className="h-full bg-gradient-to-br from-gray-50 to-white">
+      <ScrollArea className="h-full" ref={scrollAreaRef}>
         <div className="w-full max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
           {messages.map((message, index) => {
             // Extract text content from UIMessage parts

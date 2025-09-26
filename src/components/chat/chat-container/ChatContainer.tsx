@@ -2,195 +2,230 @@
 
 import React, { useState, useEffect } from "react";
 import { useChat } from "@ai-sdk/react";
-import { useChatList } from "@/contexts/ChatListContext";
-import { MobileHeader } from "./MobileHeader";
 import { EmptyState } from "./EmptyState";
 import { ChatView } from "./ChatView";
-import { cn } from "@/lib/utils";
-import { useSearchParams } from "next/navigation";
 import { Sidebar } from "../sidebar-components";
+import { NewChatInput } from "../input";
+import { ChatHeader } from "./ChatHeader";
+import { DefaultChatTransport } from "ai";
 
 interface ChatContainerProps {
   chatId?: string;
 }
 
 export function ChatContainer({ chatId }: ChatContainerProps) {
-  const { setCurrentChatId, createNewChat, chats } = useChatList();
-  const searchParams = useSearchParams();
-  const messageFromUrl = searchParams.get("message");
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  // const { setCurrentChatId, createNewChat, chats } = useChatList();
+
+  const { messages, sendMessage, status } = useChat({
+    transport: new DefaultChatTransport({
+      api: "/api/chats",
+    }),
+  });
 
   // Show sidebar by default on desktop when there are chats, collapse on mobile
   // Start with collapsed state to avoid hydration mismatch, then adjust on client
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
-  // Initialize sidebar state on client-side only to avoid hydration mismatch
-  useEffect(() => {
-    if (!isInitialized) {
-      const handleInitialResize = () => {
-        if (window.innerWidth < 1024) {
-          // On mobile, keep sidebar collapsed
-          setIsSidebarCollapsed(true);
-        } else {
-          // On desktop, show sidebar if there are chats
-          setIsSidebarCollapsed(chats.length === 0);
-        }
-        setIsInitialized(true);
-      };
+  // // Initialize sidebar state on client-side only to avoid hydration mismatch
+  // useEffect(() => {
+  //   if (!isInitialized) {
+  //     const handleInitialResize = () => {
+  //       if (window.innerWidth < 1024) {
+  //         // On mobile, keep sidebar collapsed
+  //         setIsSidebarCollapsed(true);
+  //       } else {
+  //         // On desktop, show sidebar if there are chats
+  //         setIsSidebarCollapsed(chats.length === 0);
+  //       }
+  //       setIsInitialized(true);
+  //     };
 
-      handleInitialResize();
-    }
-  }, [chats.length, isInitialized]);
+  //     handleInitialResize();
+  //   }
+  // }, [chats.length, isInitialized]);
 
-  // Update sidebar state based on window size and available chats
-  useEffect(() => {
-    if (!isInitialized) return;
+  // // Update sidebar state based on window size and available chats
+  // useEffect(() => {
+  //   if (!isInitialized) return;
 
-    const handleResize = () => {
-      if (window.innerWidth < 1024) {
-        // On mobile, keep sidebar collapsed
-        setIsSidebarCollapsed(true);
-      } else {
-        // On desktop, show sidebar if there are chats
-        setIsSidebarCollapsed(chats.length === 0);
-      }
-    };
+  //   const handleResize = () => {
+  //     if (window.innerWidth < 1024) {
+  //       // On mobile, keep sidebar collapsed
+  //       setIsSidebarCollapsed(true);
+  //     } else {
+  //       // On desktop, show sidebar if there are chats
+  //       setIsSidebarCollapsed(chats.length === 0);
+  //     }
+  //   };
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [chats.length, isInitialized]);
+  //   window.addEventListener("resize", handleResize);
+  //   return () => window.removeEventListener("resize", handleResize);
+  // }, [chats.length, isInitialized]);
 
-  console.log("[ChatContainer] Rendering with chatId:", chatId);
+  // // Listen for browser navigation changes (back/forward buttons)
+  // useEffect(() => {
+  //   const handlePopState = () => {
+  //     const currentPath = window.location.pathname;
+  //     const chatIdFromPath = currentPath.split("/c/")[1];
+  //     setCurrentChatIdFromUrl(chatIdFromPath || null);
+  //     if (chatIdFromPath) {
+  //       setCurrentChatId(chatIdFromPath);
+  //     }
+  //   };
 
-  // Initialize useChat hook
-  const { messages, status, error, setMessages, sendMessage } = useChat({
-    id: chatId,
-    onFinish: (message) => {
-      console.log("[ChatContainer] Message finished:", message);
-      // The API already handles persistence via onFinish callback
-    },
-    onError: (error) => {
-      console.error("[ChatContainer] Chat error:", error);
-    },
-  });
+  //   window.addEventListener("popstate", handlePopState);
+  //   return () => window.removeEventListener("popstate", handlePopState);
+  // }, [setCurrentChatId]);
 
-  // Set current chat ID when component mounts
-  useEffect(() => {
-    if (chatId) {
-      setCurrentChatId(chatId);
-    }
-  }, [chatId, setCurrentChatId]);
+  // // Update current chat ID when URL changes
+  // useEffect(() => {
+  //   const chatIdFromPath = pathname.split("/c/")[1];
+  //   if (chatIdFromPath !== currentChatIdFromUrl) {
+  //     setCurrentChatIdFromUrl(chatIdFromPath || null);
+  //   }
+  // }, [pathname, currentChatIdFromUrl]);
 
-  // Load initial messages when chatId changes
-  useEffect(() => {
-    const loadMessages = async () => {
-      if (!chatId) {
-        setMessages([]);
-        setIsLoadingMessages(false);
-        return;
-      }
+  // // Use the chat ID from URL or props
+  // const effectiveChatId = currentChatIdFromUrl || chatId;
 
-      try {
-        console.log("[ChatContainer] Loading messages for chat:", chatId);
-        setIsLoadingMessages(true);
-        const response = await fetch(`/api/chat/${chatId}`);
-        if (response.ok) {
-          const data = await response.json();
-          console.log(
-            "[ChatContainer] Setting initial messages:",
-            data.messages.length
-          );
-          setMessages(data.messages || []);
-        } else {
-          console.error(
-            "[ChatContainer] Failed to load messages:",
-            response.status
-          );
-        }
-      } catch (error) {
-        console.error("[ChatContainer] Error loading messages:", error);
-      } finally {
-        setIsLoadingMessages(false);
-      }
-    };
+  // console.log("[ChatContainer] Rendering with chatId:", effectiveChatId);
 
-    loadMessages();
-  }, [chatId]); // Remove setMessages dependency to prevent multiple calls
+  // // Initialize useChat hook
+  // const { messages, status, error, setMessages, sendMessage } = useChat({
+  //   id: effectiveChatId,
+  //   onFinish: (message) => {
+  //     console.log("[ChatContainer] Message finished:", message);
+  //     // The API already handles persistence via onFinish callback
+  //   },
+  //   onError: (error) => {
+  //     console.error("[ChatContainer] Chat error:", error);
+  //   },
+  // });
 
-  // Handle automatic message sending when navigating to new chat with message parameter
-  useEffect(() => {
-    if (chatId && messageFromUrl && messages.length === 0) {
-      console.log(
-        "[ChatContainer] Auto-sending message from URL:",
-        messageFromUrl
-      );
-      // Clear the URL parameter and send the message
-      window.history.replaceState({}, "", `/c/${chatId}`);
-      sendMessage({ text: messageFromUrl });
-    }
-  }, [chatId, messageFromUrl, messages.length, sendMessage]);
+  // // Set current chat ID when component mounts or effective chat ID changes
+  // useEffect(() => {
+  //   if (effectiveChatId) {
+  //     setCurrentChatId(effectiveChatId);
+  //   }
+  // }, [effectiveChatId, setCurrentChatId]);
 
-  const isLoading = status === "submitted" || status === "streaming";
+  // // Load initial messages when chatId changes
+  // useEffect(() => {
+  //   const loadMessages = async () => {
+  //     if (!effectiveChatId) {
+  //       setMessages([]);
+  //       setIsLoadingMessages(false);
+  //       return;
+  //     }
 
-  // Handle message submission
-  const handleChatSubmit = async (messageText: string) => {
-    if (!messageText.trim()) return;
+  //     try {
+  //       console.log(
+  //         "[ChatContainer] Loading messages for chat:",
+  //         effectiveChatId
+  //       );
+  //       setIsLoadingMessages(true);
+  //       const response = await fetch(`/api/chat/${effectiveChatId}`);
+  //       if (response.ok) {
+  //         const data = await response.json();
+  //         console.log(
+  //           "[ChatContainer] Setting initial messages:",
+  //           data.messages.length
+  //         );
+  //         setMessages(data.messages || []);
+  //       } else {
+  //         console.error(
+  //           "[ChatContainer] Failed to load messages:",
+  //           response.status
+  //         );
+  //       }
+  //     } catch (error) {
+  //       console.error("[ChatContainer] Error loading messages:", error);
+  //     } finally {
+  //       setIsLoadingMessages(false);
+  //     }
+  //   };
 
-    // If no chatId, create a new chat first and navigate to it
-    if (!chatId) {
-      console.log("[ChatContainer] Creating new chat for message...");
-      const newChatId = await createNewChat();
-      if (!newChatId) {
-        console.error("[ChatContainer] Failed to create new chat");
-        return;
-      }
-      // Navigate to the new chat page to ensure proper chat ID is set
-      window.location.href = `/c/${newChatId}?message=${encodeURIComponent(
-        messageText
-      )}`;
-      return;
-    }
+  //   loadMessages();
+  // }, [effectiveChatId]); // Remove setMessages dependency to prevent multiple calls
 
-    // Send the message using the AI SDK
-    console.log("[ChatContainer] Sending message to chatId:", chatId);
-    await sendMessage({ text: messageText });
-  };
+  // // Handle automatic message sending when navigating to new chat with message parameter
+  // useEffect(() => {
+  //   if (effectiveChatId && messageFromUrl && messages.length === 0) {
+  //     console.log(
+  //       "[ChatContainer] Auto-sending message from URL:",
+  //       messageFromUrl
+  //     );
+  //     // Clear the URL parameter and send the message
+  //     window.history.replaceState({}, "", `/c/${effectiveChatId}`);
+  //     sendMessage({ text: messageFromUrl });
+  //   }
+  // }, [effectiveChatId, messageFromUrl, messages.length, sendMessage]);
+
+  // const isLoading = status === "submitted" || status === "streaming";
+
+  // // Handle message submission
+  // const handleChatSubmit = async (messageText: string) => {
+  //   if (!messageText.trim()) return;
+
+  //   // If no effectiveChatId, create a new chat first and navigate to it
+  //   if (!effectiveChatId) {
+  //     console.log("[ChatContainer] Creating new chat for message...");
+  //     const newChatId = await createNewChat();
+  //     if (!newChatId) {
+  //       console.error("[ChatContainer] Failed to create new chat");
+  //       return;
+  //     }
+  //     // Navigate to the new chat page to ensure proper chat ID is set
+  //     window.history.pushState(
+  //       {},
+  //       "",
+  //       `/c/${newChatId}?message=${encodeURIComponent(messageText)}`
+  //     );
+  //     setCurrentChatIdFromUrl(newChatId);
+  //     return;
+  //   }
+
+  //   // Send the message using the AI SDK
+  //   console.log("[ChatContainer] Sending message to chatId:", effectiveChatId);
+  //   await sendMessage({ text: messageText });
+  // };
 
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="h-full flex bg-white overflow-hidden">
+    <div className="h-full flex bg-white">
       {/* Sidebar */}
       <Sidebar isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
 
       {/* Main Content */}
-      <div
-        className={cn(
-          "flex-1 flex flex-col transition-all duration-300 ease-in-out h-full",
-          !isSidebarCollapsed ? "lg:ml-0" : "lg:ml-0"
-        )}
-      >
+      <div className="flex-1 flex flex-col h-full">
         {/* Mobile Header */}
-        <MobileHeader onToggleSidebar={toggleSidebar} />
+        <ChatHeader onToggleSidebar={toggleSidebar} />
 
         {/* Content Area */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0">
           {!hasMessages ? (
-            <EmptyState onSubmit={handleChatSubmit} isLoading={isLoading} />
+            <EmptyState />
           ) : (
             <ChatView
               messages={messages}
-              isLoading={isLoading}
-              isLoadingMessages={isLoadingMessages}
-              onSubmit={handleChatSubmit}
+              isLoading={status === "submitted" || status === "streaming"}
+              isLoadingMessages={status === "streaming"}
             />
           )}
         </div>
+
+        <NewChatInput
+          onSubmit={(data) => {
+            console.log(data);
+            sendMessage({ text: data })
+          }}
+          isLoading={status === "submitted" || status === "streaming"}
+        />
       </div>
     </div>
   );

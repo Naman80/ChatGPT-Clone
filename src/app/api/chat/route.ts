@@ -12,7 +12,9 @@ export async function POST(req: Request) {
 
   try {
     console.log("🔐 [CHAT API V2] Authenticating user...");
+
     const { userId } = await auth();
+
     console.log(
       "✅ [CHAT API V2] User authenticated:",
       userId ? `User ID: ${userId}` : "No user ID"
@@ -23,8 +25,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { chatId }: { chatId: string } = await req.json();
+
     // Check for chatId in URL query parameters (sent by AI SDK useChat hook)
     const url = new URL(req.url);
+
     const chatIdFromQuery = url.searchParams.get("chatId");
 
     console.log("📝 [CHAT API V2] Parsing request body...");
