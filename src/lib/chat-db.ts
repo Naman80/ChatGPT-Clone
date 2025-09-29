@@ -13,7 +13,7 @@ const COLLECTION_NAME = "chats_v2";
 // Interface for ChatDocument (unchanged)
 export interface ChatDocument {
   _id?: string;
-  id: string;
+  chatId: string;
   userId: string;
   title: string;
   messages: UIMessage[];
@@ -45,7 +45,7 @@ export async function createChatInDB(
   const chatId = generateId();
 
   const chatDocument: Omit<ChatDocument, "_id"> = {
-    id: chatId,
+    chatId: chatId,
     userId,
     title,
     messages: [],
@@ -67,7 +67,7 @@ export async function loadChatFromDB(
   const collection = await getChatsCollection();
 
   const chat = await collection.findOne<ChatDocument>({
-    id: chatId,
+    chatId: chatId,
     userId,
   });
 
@@ -90,7 +90,7 @@ export async function saveChatMessages(
   const collection = await getChatsCollection();
 
   const result = await collection.updateOne(
-    { id: chatId, userId },
+    { chatId, userId },
     {
       $set: {
         messages,
@@ -139,7 +139,7 @@ export async function deleteChatFromDB(
   const collection = await getChatsCollection();
 
   const result = await collection.deleteOne({
-    id: chatId,
+    chatId: chatId,
     userId,
   });
 
@@ -159,7 +159,7 @@ export async function updateChatTitle(
   const collection = await getChatsCollection();
 
   const result = await collection.updateOne(
-    { id: chatId, userId },
+    { chatId: chatId, userId },
     {
       $set: {
         title,
@@ -183,7 +183,7 @@ export async function chatExists(
   const collection = await getChatsCollection();
 
   const count = await collection.countDocuments({
-    id: chatId,
+    chatId: chatId,
     userId,
   });
 

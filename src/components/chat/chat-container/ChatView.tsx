@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { memo } from "react";
 import { type UIMessage } from "ai";
 import { MessageList } from "../message-list";
 
@@ -10,15 +10,15 @@ interface ChatViewProps {
   isLoadingMessages: boolean;
 }
 
-export function ChatView({
-  messages,
-  isLoading,
-  isLoadingMessages,
-}: ChatViewProps) {
-  return (
-    <MessageList
-      messages={messages}
-      isLoading={isLoading || isLoadingMessages}
-    />
-  );
-}
+export const ChatView = memo(
+  ({ messages, isLoading, isLoadingMessages }: ChatViewProps) => {
+    return (
+      <MessageList
+        messages={messages}
+        isLoading={isLoading || isLoadingMessages}
+      />
+    );
+  }
+);
+
+ChatView.displayName = "ChatView";

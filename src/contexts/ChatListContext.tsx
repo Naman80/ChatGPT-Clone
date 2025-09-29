@@ -10,7 +10,7 @@ import React, {
 import { useUser } from "@clerk/nextjs";
 
 export interface ChatItem {
-  id: string;
+  chatId: string;
   title: string;
   createdAt: Date;
   updatedAt: Date;
@@ -72,7 +72,7 @@ export function ChatListProvider({ children }: ChatListProviderProps) {
         const chatsData = await response.json();
         console.log("[ChatListContext] Successfully loaded chats:", {
           count: chatsData.length,
-          chatIds: chatsData.map((c: ChatItem) => c.id),
+          chatIds: chatsData.map((c: ChatItem) => c.chatId),
         });
 
         // Parse dates
@@ -161,7 +161,7 @@ export function ChatListProvider({ children }: ChatListProviderProps) {
         if (response.ok) {
           console.log("[ChatListContext] Chat deleted successfully:", chatId);
           setChats((prevChats) =>
-            prevChats.filter((chat) => chat.id !== chatId)
+            prevChats.filter((chat) => chat.chatId !== chatId)
           );
 
           // If the deleted chat was the current one, clear the current chat
@@ -198,7 +198,7 @@ export function ChatListProvider({ children }: ChatListProviderProps) {
         // Optimistically update the title
         setChats((prevChats) =>
           prevChats.map((chat) =>
-            chat.id === chatId
+            chat.chatId === chatId
               ? { ...chat, title, updatedAt: new Date() }
               : chat
           )
@@ -215,7 +215,7 @@ export function ChatListProvider({ children }: ChatListProviderProps) {
           // Revert optimistic update on failure
           setChats((prevChats) =>
             prevChats.map((chat) =>
-              chat.id === chatId
+              chat.chatId === chatId
                 ? { ...chat, title: chat.title, updatedAt: chat.updatedAt }
                 : chat
             )

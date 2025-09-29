@@ -1,108 +1,59 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { memo, useCallback, useMemo, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatList } from "@/contexts/ChatListContext";
-import { useRouter, usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { SidebarHeader } from "./SidebarHeader";
 import { SidebarMenu } from "./SidebarMenu";
 import { SidebarFooter } from "./SidebarFooter";
 import { ChatItem } from "./ChatItem";
+import { useParams } from "next/navigation";
 
 interface SidebarProps {
   isCollapsed: boolean;
   onToggle: () => void;
 }
 
-export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
-  const {
-    chats,
-    currentChatId,
-    setCurrentChatId,
-    createNewChat,
-    deleteChat,
-    updateChatTitle,
-  } = useChatList();
+export const Sidebar = memo(({ isCollapsed, onToggle }: SidebarProps) => {
+  const { chatId: currentChatId } = useParams();
 
-  const router = useRouter();
-  const pathname = usePathname();
+  const { chats, updateChatTitle } = useChatList();
   const [searchQuery, setSearchQuery] = useState("");
-  const [hoveredChatId, setHoveredChatId] = useState<string | null>(null);
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
-  const [showDropdownId, setShowDropdownId] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setShowDropdownId(null);
-      }
-    };
+  const handleEditStart = useCallback(
+    (chatId: string, currentTitle: string) => {
+      setEditingChatId(chatId);
+      setEditingTitle(currentTitle);
+    },
+    []
+  );
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  const handleNewChat = async () => {
-    const newChatId = await createNewChat();
-    if (newChatId) {
-      // Use client-side navigation to avoid full re-render
-      window.history.pushState({}, "", `/c/${newChatId}`);
-      setCurrentChatId(newChatId);
-    }
-  };
-
-  const handleChatSelect = (chatId: string) => {
-    // Only navigate if we're not already on this chat
-    const currentChatIdFromUrl = pathname.split("/c/")[1];
-    if (currentChatIdFromUrl !== chatId) {
-      // Use client-side navigation to avoid full re-render
-      window.history.pushState({}, "", `/c/${chatId}`);
-    }
-    setCurrentChatId(chatId);
-  };
-
-  const handleEditStart = (chatId: string, currentTitle: string) => {
-    setEditingChatId(chatId);
-    setEditingTitle(currentTitle);
-    setShowDropdownId(null);
-  };
-
-  const handleEditSave = async () => {
+  const handleEditSave = useCallback(async () => {
     if (editingChatId && editingTitle.trim()) {
       await updateChatTitle(editingChatId, editingTitle.trim());
     }
     setEditingChatId(null);
     setEditingTitle("");
-  };
+  }, [editingChatId, updateChatTitle, editingTitle]);
 
-  const handleEditCancel = () => {
+  const handleEditCancel = useCallback(() => {
     setEditingChatId(null);
     setEditingTitle("");
-  };
+  }, []);
 
-  const handleDeleteChat = async (chatId: string) => {
-    if (window.confirm("Are you sure you want to delete this chat?")) {
-      await deleteChat(chatId);
-      if (currentChatId === chatId) {
-        // Navigate to the chat interface without a specific chat
-        window.history.pushState({}, "", "/chat");
-        setCurrentChatId(null);
-      }
-    }
-    setShowDropdownId(null);
-  };
+  const handleDeleteChat = useCallback(async (chatId: string) => {
+    console.log("handleDeleteChat", chatId);
+  }, []);
 
-  const filteredChats = chats.filter((chat) =>
-    chat.title.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredChats = useMemo(
+    () =>
+      chats.filter((chat) =>
+        chat.title.toLowerCase().includes(searchQuery.toLowerCase())
+      ),
+    [chats, searchQuery]
   );
 
   return (
@@ -110,7 +61,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       {/* Mobile overlay */}
       {!isCollapsed && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={onToggle}
         />
       )}
@@ -118,12 +69,12 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed top-0 left-0 z-50 h-full bg-white text-gray-900 transition-all duration-300 ease-in-out lg:relative lg:z-auto border-r border-gray-200",
+          "fixed top-0 left-0 z-50 h-full bg-white text-gray-900 transition-all duration-300 ease-in-out md:relative md:z-auto border-r border-gray-200",
           // Mobile behavior
-          "lg:flex lg:flex-col",
+          "md:flex md:flex-col",
           isCollapsed
-            ? "-translate-x-full lg:translate-x-0 lg:w-16" // Mobile hidden, Desktop collapsed (64px)
-            : "translate-x-0 w-80 lg:w-80" // Mobile open, Desktop open (320px)
+            ? "-translate-x-full md:translate-x-0 md:w-16" // Mobile hidden, Desktop collapsed (64px)
+            : "translate-x-0 w-80 md:w-80" // Mobile open, Desktop open (320px)
         )}
       >
         <div className="flex flex-col h-full justify-between">
@@ -133,14 +84,10 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           <div
             className={cn(
               "space-y-2",
-              isCollapsed ? "lg:px-2 lg:py-4" : "px-3 py-4"
+              isCollapsed ? "md:px-2 md:py-4" : "px-3 py-4"
             )}
           >
-            <SidebarMenu
-              isCollapsed={isCollapsed}
-              onToggle={onToggle}
-              onNewChat={handleNewChat}
-            />
+            <SidebarMenu isCollapsed={isCollapsed} onToggle={onToggle} />
           </div>
 
           {/* Separator */}
@@ -160,25 +107,15 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                 <div className="space-y-1 pb-4">
                   {filteredChats.map((chat) => (
                     <ChatItem
-                      key={chat.id}
+                      key={chat.chatId}
                       chat={chat}
-                      isActive={currentChatId === chat.id}
-                      isHovered={hoveredChatId === chat.id}
-                      isEditing={editingChatId === chat.id}
+                      isActive={currentChatId === chat.chatId}
+                      isEditing={editingChatId === chat.chatId}
                       editingTitle={editingTitle}
-                      showDropdown={showDropdownId === chat.id}
-                      dropdownRef={dropdownRef}
-                      onSelect={handleChatSelect}
-                      onHover={setHoveredChatId}
                       onEditStart={handleEditStart}
                       onEditSave={handleEditSave}
                       onEditCancel={handleEditCancel}
                       onTitleChange={setEditingTitle}
-                      onDropdownToggle={(chatId) =>
-                        setShowDropdownId(
-                          showDropdownId === chatId ? null : chatId
-                        )
-                      }
                       onDelete={handleDeleteChat}
                     />
                   ))}
@@ -192,4 +129,6 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
       </div>
     </>
   );
-}
+});
+
+Sidebar.displayName = "Sidebar";

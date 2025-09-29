@@ -1,14 +1,10 @@
 import { ChatContainer } from "@/components/chat";
 import { ChatListProvider } from "@/contexts/ChatListContext";
 
-export default async function Page(props: {
-  params: Promise<{ chatId: string }>;
-}) {
-  const { chatId } = await props.params;
-  console.log(chatId, "grtg");
+export default async function Page() {
   return (
     <ChatListProvider>
-      <ChatContainer chatId={chatId} />
+      <ChatContainer />
     </ChatListProvider>
   );
 }

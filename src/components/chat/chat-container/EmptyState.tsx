@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { memo } from "react";
 
-export function EmptyState() {
+export const EmptyState = memo(() => {
   return (
     <div className="flex-1 flex items-center justify-center px-6">
       <div className="text-center">
@@ -12,4 +12,6 @@ export function EmptyState() {
       </div>
     </div>
   );
-}
+});
+
+EmptyState.displayName = "EmptyState";

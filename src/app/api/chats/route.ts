@@ -5,7 +5,10 @@ import {
   createChatInDB,
   deleteChatFromDB,
   updateChatTitle,
+  saveChatMessages,
 } from "@/lib/chat-db";
+import { convertToModelMessages, streamText, UIMessage } from "ai";
+import { getCurrentModel, getLLMService } from "@/lib/llm";
 
 export async function GET() {
   console.log("🚀 [CHATS API V2] Starting GET request to fetch all chats");
@@ -29,7 +32,7 @@ export async function GET() {
 
     console.log("✅ [CHATS API V2] Found chats:", {
       count: chats.length,
-      chatIds: chats.map((c) => c.id),
+      chatIds: chats.map((c) => c.chatId),
     });
 
     console.log("📤 [CHATS API V2] Returning chats");
@@ -48,7 +51,6 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  console.log(req, "this is req of post fnction");
   console.log("🚀 [CHATS API V2] Starting POST request to create new chat");
 
   try {
@@ -66,16 +68,69 @@ export async function POST(req: Request) {
 
     console.log("✅ [CHATS API V2] Chat created with ID:", chatId);
 
-    const responseData = {
-      id: chatId,
-      title: "New Chat",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    const { messages }: { messages: UIMessage[] } = await req.json();
 
-    console.log("📤 [CHATS API V2] Returning created chat data");
+    console.log(messages, "new chat msge");
 
-    return NextResponse.json(responseData);
+    // Validate messages array
+    if (!Array.isArray(messages) || messages.length === 0) {
+      console.log("❌ [CHAT API V2] Invalid messages array");
+      return NextResponse.json({ error: "Invalid messages" }, { status: 400 });
+    }
+
+    console.log("🤖 [CHAT API V2] Preparing LLM request...");
+
+    // Get LLM service and validate
+    const llmService = getLLMService();
+    const validation = await llmService.validateProvider();
+
+    if (!validation.valid) {
+      console.log(
+        "❌ [CHAT API V2] LLM provider validation failed:",
+        validation.error
+      );
+      return NextResponse.json(
+        { error: "LLM provider not configured" },
+        { status: 500 }
+      );
+    }
+
+    const model = getCurrentModel();
+
+    // Convert UI messages to model messages for the LLM
+    const modelMessages = convertToModelMessages(messages);
+    console.log("✅ [CHAT API V2] Messages converted for LLM:", {
+      messageCount: modelMessages?.length || 0,
+    });
+
+    // Stream response from LLM
+    console.log("🔄 [CHAT API V2] Calling LLM streamText...");
+
+    const result = streamText({
+      model,
+      messages: modelMessages,
+      
+    });
+
+    console.log("✅ [CHAT API V2] LLM stream created successfully");
+
+    console.log(
+      "📤 [CHAT API V2] Returning streaming response with persistence"
+    );
+
+    return result.toUIMessageStreamResponse({
+      originalMessages: messages,
+      onFinish: async ({ messages: finalMessages }) => {
+        try {
+          console.log("💾 [CHAT API V2] Saving messages to database...");
+          await saveChatMessages(chatId, userId, finalMessages);
+          console.log("✅ [CHAT API V2] Messages saved successfully");
+        } catch (error) {
+          console.error("💥 [CHAT API V2] Failed to save messages:", error);
+          // Don't throw here to avoid breaking the stream
+        }
+      },
+    });
   } catch (error) {
     console.error("💥 [CHATS API V2] POST Error occurred:", {
       message: error instanceof Error ? error.message : "Unknown error",

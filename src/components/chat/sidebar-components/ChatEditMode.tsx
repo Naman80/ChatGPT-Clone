@@ -19,12 +19,19 @@ export function ChatEditMode({
   onCancel,
 }: ChatEditModeProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div
+      className="flex items-center gap-2 "
+      onClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+      }}
+    >
       <Input
         value={title}
         onChange={(e) => onTitleChange(e.target.value)}
-        className="text-sm h-7 px-2 bg-white"
+        className="text-sm h-7 px-2 bg-transparent outline-none border-none"
         autoFocus
+        type="text"
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             onSave();

@@ -25,12 +25,6 @@ export function MessageList({
     }
   }, [messages]);
 
-  console.log("[MessageList] Rendering with debug info:", {
-    messageCount: messages.length,
-    isLoading,
-    timestamp: new Date().toISOString(),
-  });
-
   // Empty state when no messages
   if (messages.length === 0 && !isLoading) {
     return <EmptyMessageState isLoading={false} />;

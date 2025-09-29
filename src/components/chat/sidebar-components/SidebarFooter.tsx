@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { memo, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 
@@ -8,8 +8,16 @@ interface SidebarFooterProps {
   isCollapsed: boolean;
 }
 
-export function SidebarFooter({ isCollapsed }: SidebarFooterProps) {
+export const SidebarFooter = memo(({ isCollapsed }: SidebarFooterProps) => {
   const { user } = useUser();
+
+  const handleProfileClick = useCallback(() => {
+    console.log("Profile clicked");
+  }, []);
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div
@@ -17,12 +25,10 @@ export function SidebarFooter({ isCollapsed }: SidebarFooterProps) {
     >
       <button
         className={cn(
-          "w-full flex items-center gap-3 hover:bg-gray-100 rounded-lg transition-colors",
+          "w-full flex items-center gap-3 cursor-pointer",
           isCollapsed ? "lg:justify-center" : ""
         )}
-        onClick={() => {
-          console.log("User profile clicked");
-        }}
+        onClick={handleProfileClick}
       >
         <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
           {user?.firstName?.charAt(0) ||
@@ -42,4 +48,6 @@ export function SidebarFooter({ isCollapsed }: SidebarFooterProps) {
       </button>
     </div>
   );
-}
+});
+
+SidebarFooter.displayName = "SidebarFooter";
