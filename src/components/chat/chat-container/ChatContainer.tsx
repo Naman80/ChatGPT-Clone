@@ -10,24 +10,29 @@ import { ChatHeader } from "./ChatHeader";
 import { DefaultChatTransport } from "ai";
 import { useParams, useRouter } from "next/navigation";
 import { ChatNotFound } from "./ChatNotFound";
+import { useChatList } from "@/contexts/ChatListContext";
+import { ChatLoadingScreen } from "./ChatLoadingScreen";
 
 export function ChatContainer() {
   const router = useRouter();
   const { chatId } = useParams();
 
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { loadChats } = useChatList();
 
   // Initialize useChat with fetched messages
   const { messages, setMessages, sendMessage, status, id } = useChat({
+    messages: [],
     transport: new DefaultChatTransport({
       api: chatId ? `/api/chats/${chatId}` : `/api/chats`,
     }),
     onFinish: () => {
-      !chatId && router.replace(`c/${id}`); // important for changing url when new chat
-    },
-    onData: (data) => {
-      console.log(data, "data part is received");
+      if (!chatId) {
+        router.replace(`c/${id}`, { scroll: false });
+        loadChats();
+      }
     },
   });
 
@@ -35,6 +40,7 @@ export function ChatContainer() {
 
   const fetchMessages = useCallback(async () => {
     try {
+      setIsLoading(true);
       setError(null);
       const response = await fetch(`/api/chats/${chatId}`, {
         method: "GET",
@@ -47,7 +53,6 @@ export function ChatContainer() {
 
       if (response.ok) {
         console.log("[ChatContainer] Initial messages:", result);
-
         setMessages(result.messages);
       } else {
         setError(result.error || "Failed to fetch messages");
@@ -56,12 +61,14 @@ export function ChatContainer() {
       setError(
         `An error occurred: ${err instanceof Error ? err.message : String(err)}`
       );
+    } finally {
+      setIsLoading(false);
     }
-  }, [chatId]);
+  }, [chatId, setMessages]);
 
   const toggleSidebar = useCallback(() => {
-    setIsSidebarCollapsed(!isSidebarCollapsed);
-  }, [isSidebarCollapsed]);
+    setIsSidebarCollapsed((prev) => !prev);
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -88,8 +95,6 @@ export function ChatContainer() {
     fetchMessages();
   }, [chatId, fetchMessages]);
 
-  console.log("mess", messages, id);
-
   return (
     <div className="h-full flex bg-white">
       {/* Sidebar */}
@@ -106,13 +111,15 @@ export function ChatContainer() {
           <>
             {/* Content Area */}
             <div className="flex-1 flex flex-col min-h-0">
-              {!haveMessages ? (
+              {isLoading ? (
+                <ChatLoadingScreen />
+              ) : !haveMessages ? (
                 <EmptyState />
               ) : (
                 <ChatView
                   messages={messages}
-                  isLoading={status === "submitted" || status === "streaming"}
-                  isLoadingMessages={status === "streaming"}
+                  isLoading={status === "submitted" || isLoading}
+                  isStreaming={status === "streaming"}
                 />
               )}
             </div>

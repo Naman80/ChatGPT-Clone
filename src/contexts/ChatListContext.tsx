@@ -18,10 +18,7 @@ export interface ChatItem {
 
 interface ChatListContextType {
   chats: ChatItem[];
-  isLoading: boolean;
   error: string | null;
-  currentChatId: string | null;
-  setCurrentChatId: (chatId: string | null) => void;
   loadChats: () => Promise<void>;
   deleteChat: (chatId: string) => Promise<void>;
   updateChatTitle: (chatId: string, title: string) => Promise<void>;
@@ -37,25 +34,21 @@ interface ChatListProviderProps {
 
 export function ChatListProvider({ children }: ChatListProviderProps) {
   const [chats, setChats] = useState<ChatItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const { user, isLoaded } = useUser();
-
-  console.log("[ChatListProvider] Initialized with:", {
-    hasUser: !!user,
-    isLoaded,
-    userId: user?.id,
-  });
 
   // Load chats from API
   const loadChats = useCallback(async () => {
     try {
       console.log("[ChatListContext] Starting to load chats...");
-      setIsLoading(true);
       setError(null);
 
-      const response = await fetch("/api/chats");
+      const response = await fetch("/api/chats", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
       console.log("[ChatListContext] API response status:", response.status);
 
@@ -97,48 +90,38 @@ export function ChatListProvider({ children }: ChatListProviderProps) {
     } catch (error) {
       console.error("[ChatListContext] Error loading chats:", error);
       setError(error instanceof Error ? error.message : "Unknown error");
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
   // Delete a chat
-  const deleteChat = useCallback(
-    async (chatId: string): Promise<void> => {
-      try {
-        console.log("[ChatListContext] Deleting chat:", chatId);
-        setError(null);
+  const deleteChat = useCallback(async (chatId: string): Promise<void> => {
+    try {
+      console.log("[ChatListContext] Deleting chat:", chatId);
+      setError(null);
 
-        const response = await fetch(`/api/chats/${chatId}`, {
-          method: "DELETE",
-        });
+      const response = await fetch(`/api/chats/${chatId}`, {
+        method: "DELETE",
+      });
 
-        if (response.ok) {
-          console.log("[ChatListContext] Chat deleted successfully:", chatId);
-          setChats((prevChats) =>
-            prevChats.filter((chat) => chat.chatId !== chatId)
-          );
-
-          // If the deleted chat was the current one, clear the current chat
-          if (currentChatId === chatId) {
-            setCurrentChatId(null);
-          }
-        } else {
-          const errorText = await response.text();
-          console.error(
-            "[ChatListContext] Failed to delete chat:",
-            response.status,
-            errorText
-          );
-          setError(`Failed to delete chat: ${response.status}`);
-        }
-      } catch (error) {
-        console.error("[ChatListContext] Error deleting chat:", error);
-        setError(error instanceof Error ? error.message : "Unknown error");
+      if (response.ok) {
+        console.log("[ChatListContext] Chat deleted successfully:", chatId);
+        setChats((prevChats) =>
+          prevChats.filter((chat) => chat.chatId !== chatId)
+        );
+      } else {
+        const errorText = await response.text();
+        console.error(
+          "[ChatListContext] Failed to delete chat:",
+          response.status,
+          errorText
+        );
+        setError(`Failed to delete chat: ${response.status}`);
       }
-    },
-    [currentChatId]
-  );
+    } catch (error) {
+      console.error("[ChatListContext] Error deleting chat:", error);
+      setError(error instanceof Error ? error.message : "Unknown error");
+    }
+  }, []);
 
   // Update chat title
   const updateChatTitle = useCallback(
@@ -163,6 +146,7 @@ export function ChatListProvider({ children }: ChatListProviderProps) {
         const response = await fetch(`/api/chats/${chatId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
+
           body: JSON.stringify({ title }),
         });
 
@@ -216,16 +200,16 @@ export function ChatListProvider({ children }: ChatListProviderProps) {
     }
   }, [isLoaded, user?.id, loadChats]);
 
-  const value: ChatListContextType = {
-    chats,
-    isLoading,
-    error,
-    currentChatId,
-    setCurrentChatId,
-    loadChats,
-    deleteChat,
-    updateChatTitle,
-  };
+  const value = React.useMemo(
+    () => ({
+      chats,
+      error,
+      loadChats,
+      deleteChat,
+      updateChatTitle,
+    }),
+    [chats, error, loadChats, deleteChat, updateChatTitle]
+  );
 
   return (
     <ChatListContext.Provider value={value}>

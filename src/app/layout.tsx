@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { ChatListProvider } from "@/contexts/ChatListContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,13 +26,15 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en">
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen`}
-        >
-          {children}
-        </body>
-      </html>
+      <ChatListProvider>
+        <html lang="en">
+          <body
+            className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen`}
+          >
+            {children}
+          </body>
+        </html>
+      </ChatListProvider>
     </ClerkProvider>
   );
 }

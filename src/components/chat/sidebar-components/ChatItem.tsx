@@ -6,6 +6,7 @@ import { ChatItem as ChatItemType } from "@/contexts/ChatListContext";
 import { ChatEditMode } from "./ChatEditMode";
 import Link from "next/link";
 import { ChatDropdown } from "./ChatDropdown";
+import { useParams } from "next/navigation";
 
 interface ChatItemProps {
   chat: ChatItemType;
@@ -31,9 +32,17 @@ export const ChatItem = memo(
     onTitleChange,
     onDelete,
   }: ChatItemProps) => {
+    const { chatId } = useParams();
+
     return (
       <Link
         href={`/c/${chat.chatId}`}
+        onNavigate={(e) => {
+          if (chatId === chat.chatId) {
+            e.preventDefault();
+          }
+        }}
+        scroll={false}
         className={cn(
           "group relative rounded-lg transition-all duration-200 px-3 py-2.5 flex items-center justify-between",
           isActive ? "bg-gray-200" : "hover:bg-gray-100 cursor-pointer"

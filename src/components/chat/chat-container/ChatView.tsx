@@ -7,15 +7,16 @@ import { MessageList } from "../message-list";
 interface ChatViewProps {
   messages: UIMessage[];
   isLoading: boolean;
-  isLoadingMessages: boolean;
+  isStreaming: boolean;
 }
 
 export const ChatView = memo(
-  ({ messages, isLoading, isLoadingMessages }: ChatViewProps) => {
+  ({ messages, isLoading, isStreaming }: ChatViewProps) => {
     return (
       <MessageList
         messages={messages}
-        isLoading={isLoading || isLoadingMessages}
+        isLoading={isLoading}
+        isStreaming={isStreaming}
       />
     );
   }

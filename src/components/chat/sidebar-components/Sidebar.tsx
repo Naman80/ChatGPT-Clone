@@ -46,7 +46,6 @@ export const Sidebar = memo(({ isCollapsed, onToggle }: SidebarProps) => {
 
   const handleDeleteChat = useCallback(
     async (chatId: string) => {
-      console.log("handleDeleteChat", chatId);
       if (chatId && chatId.trim()) {
         await deleteChat(chatId);
       }
@@ -60,6 +59,35 @@ export const Sidebar = memo(({ isCollapsed, onToggle }: SidebarProps) => {
         chat.title.toLowerCase().includes(searchQuery.toLowerCase())
       ),
     [chats, searchQuery]
+  );
+
+  const chatItems = useMemo(
+    () =>
+      filteredChats.map((chat) => (
+        <ChatItem
+          key={chat.chatId}
+          chat={chat}
+          isActive={chat.chatId === currentChatId}
+          isEditing={chat.chatId === editingChatId}
+          editingTitle={editingTitle}
+          onEditStart={handleEditStart}
+          onEditSave={handleEditSave}
+          onEditCancel={handleEditCancel}
+          onTitleChange={setEditingTitle}
+          onDelete={handleDeleteChat}
+        />
+      )),
+    [
+      filteredChats,
+      currentChatId,
+      editingChatId,
+      editingTitle,
+      handleEditStart,
+      handleEditSave,
+      handleEditCancel,
+      handleDeleteChat,
+      setEditingTitle,
+    ]
   );
 
   return (
@@ -110,22 +138,7 @@ export const Sidebar = memo(({ isCollapsed, onToggle }: SidebarProps) => {
           {!isCollapsed && (
             <div className={cn("flex-1 overflow-hidden p-3")}>
               <ScrollArea className="h-full">
-                <div className="space-y-1 pb-4">
-                  {filteredChats.map((chat) => (
-                    <ChatItem
-                      key={chat.chatId}
-                      chat={chat}
-                      isActive={currentChatId === chat.chatId}
-                      isEditing={editingChatId === chat.chatId}
-                      editingTitle={editingTitle}
-                      onEditStart={handleEditStart}
-                      onEditSave={handleEditSave}
-                      onEditCancel={handleEditCancel}
-                      onTitleChange={setEditingTitle}
-                      onDelete={handleDeleteChat}
-                    />
-                  ))}
-                </div>
+                <div className="space-y-1 pb-4">{chatItems}</div>
               </ScrollArea>
             </div>
           )}

@@ -10,10 +10,12 @@ import { type UIMessage } from "ai";
 interface MessageListProps {
   messages: UIMessage[];
   isLoading?: boolean;
+  isStreaming?: boolean;
 }
 export function MessageList({
   messages = [],
   isLoading = false,
+  isStreaming = false,
 }: MessageListProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
