@@ -23,7 +23,6 @@ interface ChatListContextType {
   currentChatId: string | null;
   setCurrentChatId: (chatId: string | null) => void;
   loadChats: () => Promise<void>;
-  createNewChat: () => Promise<string | null>;
   deleteChat: (chatId: string) => Promise<void>;
   updateChatTitle: (chatId: string, title: string) => Promise<void>;
 }
@@ -103,50 +102,6 @@ export function ChatListProvider({ children }: ChatListProviderProps) {
     }
   }, []);
 
-  // Create a new chat
-  const createNewChat = useCallback(async (): Promise<string | null> => {
-    try {
-      console.log("[ChatListContext] Creating new chat...");
-      setError(null);
-
-      const response = await fetch("/api/chats", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: "New Chat" }),
-      });
-
-      if (response.ok) {
-        const newChat = await response.json();
-        console.log("[ChatListContext] New chat created:", newChat.id);
-
-        // Format dates
-        const formattedChat = {
-          ...newChat,
-          createdAt: new Date(newChat.createdAt),
-          updatedAt: new Date(newChat.updatedAt),
-        };
-
-        // Add to the beginning of the chats array
-        setChats((prevChats) => [formattedChat, ...prevChats]);
-        setCurrentChatId(newChat.id);
-        return newChat.id;
-      } else {
-        const errorText = await response.text();
-        console.error(
-          "[ChatListContext] Failed to create chat:",
-          response.status,
-          errorText
-        );
-        setError(`Failed to create chat: ${response.status}`);
-        return null;
-      }
-    } catch (error) {
-      console.error("[ChatListContext] Error creating chat:", error);
-      setError(error instanceof Error ? error.message : "Unknown error");
-      return null;
-    }
-  }, []);
-
   // Delete a chat
   const deleteChat = useCallback(
     async (chatId: string): Promise<void> => {
@@ -154,7 +109,7 @@ export function ChatListProvider({ children }: ChatListProviderProps) {
         console.log("[ChatListContext] Deleting chat:", chatId);
         setError(null);
 
-        const response = await fetch(`/api/chat/${chatId}`, {
+        const response = await fetch(`/api/chats/${chatId}`, {
           method: "DELETE",
         });
 
@@ -205,8 +160,8 @@ export function ChatListProvider({ children }: ChatListProviderProps) {
         );
 
         // Send update to server
-        const response = await fetch(`/api/chat/${chatId}`, {
-          method: "PUT",
+        const response = await fetch(`/api/chats/${chatId}`, {
+          method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title }),
         });
@@ -268,7 +223,6 @@ export function ChatListProvider({ children }: ChatListProviderProps) {
     currentChatId,
     setCurrentChatId,
     loadChats,
-    createNewChat,
     deleteChat,
     updateChatTitle,
   };

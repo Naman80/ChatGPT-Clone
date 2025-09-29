@@ -7,10 +7,9 @@ import { Message } from "@/types/chat";
 
 interface MessageItemProps {
   message: Message;
-  isLast?: boolean;
 }
 
-export function MessageItem({ message, isLast = false }: MessageItemProps) {
+export function MessageItem({ message }: MessageItemProps) {
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
 

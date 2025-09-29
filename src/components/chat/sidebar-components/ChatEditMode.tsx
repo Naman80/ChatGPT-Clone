@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CheckIcon, XIcon } from "lucide-react";
@@ -18,6 +18,19 @@ export function ChatEditMode({
   onSave,
   onCancel,
 }: ChatEditModeProps) {
+  const inputKeyDownHandler = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter") {
+        onSave();
+        e.preventDefault();
+        e.stopPropagation();
+      } else if (e.key === "Escape") {
+        onCancel();
+      }
+    },
+    [onSave, onCancel]
+  );
+
   return (
     <div
       className="flex items-center gap-2 "
@@ -32,13 +45,7 @@ export function ChatEditMode({
         className="text-sm h-7 px-2 bg-transparent outline-none border-none"
         autoFocus
         type="text"
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            onSave();
-          } else if (e.key === "Escape") {
-            onCancel();
-          }
-        }}
+        onKeyDown={inputKeyDownHandler}
       />
       <Button
         variant="ghost"

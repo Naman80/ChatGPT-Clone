@@ -11,7 +11,7 @@ export const ChatNotFound = memo(() => {
         Chat not found
       </h1>
       <Link href="/">
-        <Button>Start a new chat</Button>
+        <Button className="cursor-pointer">Start a new chat</Button>
       </Link>
     </div>
   );

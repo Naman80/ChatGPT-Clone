@@ -38,14 +38,15 @@ async function getChatsCollection(
  */
 export async function createChatInDB(
   userId: string,
+  chatId?: string,
   title: string = "New Chat"
 ): Promise<string> {
   const collection = await getChatsCollection();
 
-  const chatId = generateId();
+  const newChatId = chatId ?? generateId();
 
   const chatDocument: Omit<ChatDocument, "_id"> = {
-    chatId: chatId,
+    chatId: newChatId,
     userId,
     title,
     messages: [],
@@ -54,7 +55,7 @@ export async function createChatInDB(
   };
 
   await collection.insertOne(chatDocument);
-  return chatId;
+  return newChatId;
 }
 
 /**

@@ -4,7 +4,6 @@ import {
   getUserChats,
   createChatInDB,
   deleteChatFromDB,
-  updateChatTitle,
   saveChatMessages,
 } from "@/lib/chat-db";
 import { convertToModelMessages, streamText, UIMessage } from "ai";
@@ -64,11 +63,13 @@ export async function POST(req: Request) {
 
     console.log("🆕 [CHATS API V2] Creating new chat...");
 
-    const chatId = await createChatInDB(userId, "New Chat");
+    const { messages, id: chatId }: { messages: UIMessage[]; id: string } =
+      await req.json();
 
-    console.log("✅ [CHATS API V2] Chat created with ID:", chatId);
+    // create new chat in db
+    await createChatInDB(userId, chatId, "New Chat");
 
-    const { messages }: { messages: UIMessage[] } = await req.json();
+    console.log("✅ [CHATS API V2] Chat created with ID:", chatId, req);
 
     console.log(messages, "new chat msge");
 
@@ -109,10 +110,9 @@ export async function POST(req: Request) {
     const result = streamText({
       model,
       messages: modelMessages,
-      
     });
 
-    console.log("✅ [CHAT API V2] LLM stream created successfully");
+    console.log("✅ [CHAT API V2] LLM stream created successfully", result);
 
     console.log(
       "📤 [CHAT API V2] Returning streaming response with persistence"
@@ -133,120 +133,6 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("💥 [CHATS API V2] POST Error occurred:", {
-      message: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : "No stack trace",
-      timestamp: new Date().toISOString(),
-    });
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function PUT(req: Request) {
-  console.log("🚀 [CHAT UPDATE API] Starting PUT request");
-
-  try {
-    console.log("🔐 [CHAT UPDATE API] Authenticating user...");
-    const { userId } = await auth();
-
-    if (!userId) {
-      console.log("❌ [CHAT UPDATE API] Authentication failed - no userId");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { chatId, title } = await req.json();
-    console.log("📝 [CHAT UPDATE API] Updating chat:", chatId);
-
-    if (!chatId) {
-      console.log("❌ [CHAT UPDATE API] No chat ID provided");
-      return NextResponse.json({ error: "Chat ID required" }, { status: 400 });
-    }
-
-    console.log("📝 [CHAT UPDATE API] New title:", title);
-
-    if (!title || typeof title !== "string") {
-      console.log("❌ [CHAT UPDATE API] Invalid title provided");
-      return NextResponse.json(
-        { error: "Valid title required" },
-        { status: 400 }
-      );
-    }
-
-    try {
-      await updateChatTitle(chatId, userId, title);
-      console.log(
-        "✅ [CHAT UPDATE API] Chat title updated successfully:",
-        chatId
-      );
-
-      return NextResponse.json({ success: true, title });
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message === "Chat not found or access denied"
-      ) {
-        console.log(
-          "❌ [CHAT UPDATE API] Chat not found or access denied:",
-          chatId
-        );
-        return NextResponse.json({ error: "Chat not found" }, { status: 404 });
-      }
-      throw error;
-    }
-  } catch (error) {
-    console.error("💥 [CHAT UPDATE API] Error occurred:", {
-      message: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : "No stack trace",
-      timestamp: new Date().toISOString(),
-    });
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(req: Request) {
-  console.log("🚀 [CHAT DELETE API] Starting DELETE request");
-
-  try {
-    console.log("🔐 [CHAT DELETE API] Authenticating user...");
-    const { userId } = await auth();
-
-    if (!userId) {
-      console.log("❌ [CHAT DELETE API] Authentication failed - no userId");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { chatId } = await req.json();
-    console.log("🗑️ [CHAT DELETE API] Deleting chat:", chatId);
-
-    if (!chatId) {
-      console.log("❌ [CHAT DELETE API] No chat ID provided");
-      return NextResponse.json({ error: "Chat ID required" }, { status: 400 });
-    }
-
-    try {
-      await deleteChatFromDB(chatId, userId);
-      console.log("✅ [CHAT DELETE API] Chat deleted successfully:", chatId);
-
-      return NextResponse.json({ success: true });
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message === "Chat not found or access denied"
-      ) {
-        console.log(
-          "❌ [CHAT DELETE API] Chat not found or access denied:",
-          chatId
-        );
-        return NextResponse.json({ error: "Chat not found" }, { status: 404 });
-      }
-    }
-  } catch (error) {
-    console.error("💥 [CHAT DELETE API] Error occurred:", {
       message: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : "No stack trace",
       timestamp: new Date().toISOString(),

@@ -18,7 +18,7 @@ interface SidebarProps {
 export const Sidebar = memo(({ isCollapsed, onToggle }: SidebarProps) => {
   const { chatId: currentChatId } = useParams();
 
-  const { chats, updateChatTitle } = useChatList();
+  const { chats, updateChatTitle, deleteChat } = useChatList();
   const [searchQuery, setSearchQuery] = useState("");
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
@@ -44,9 +44,15 @@ export const Sidebar = memo(({ isCollapsed, onToggle }: SidebarProps) => {
     setEditingTitle("");
   }, []);
 
-  const handleDeleteChat = useCallback(async (chatId: string) => {
-    console.log("handleDeleteChat", chatId);
-  }, []);
+  const handleDeleteChat = useCallback(
+    async (chatId: string) => {
+      console.log("handleDeleteChat", chatId);
+      if (chatId && chatId.trim()) {
+        await deleteChat(chatId);
+      }
+    },
+    [deleteChat]
+  );
 
   const filteredChats = useMemo(
     () =>

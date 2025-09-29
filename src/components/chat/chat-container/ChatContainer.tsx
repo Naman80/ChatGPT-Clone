@@ -8,30 +8,34 @@ import { Sidebar } from "../sidebar-components";
 import { ChatInput } from "../input";
 import { ChatHeader } from "./ChatHeader";
 import { DefaultChatTransport } from "ai";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ChatNotFound } from "./ChatNotFound";
 
 export function ChatContainer() {
+  const router = useRouter();
   const { chatId } = useParams();
 
-  const [loading, setLoading] = useState<boolean>(!!chatId); // Only load if chatId exists
   const [error, setError] = useState<string | null>(null);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Initialize useChat with fetched messages
-  const { messages, setMessages, sendMessage, status } = useChat({
+  const { messages, setMessages, sendMessage, status, id } = useChat({
     transport: new DefaultChatTransport({
       api: chatId ? `/api/chats/${chatId}` : `/api/chats`,
     }),
+    onFinish: () => {
+      !chatId && router.replace(`c/${id}`); // important for changing url when new chat
+    },
     onData: (data) => {
       console.log(data, "data part is received");
     },
   });
 
+  const haveMessages = useMemo(() => messages.length > 0, [messages]);
+
   const fetchMessages = useCallback(async () => {
     try {
       setError(null);
-      setLoading(true);
       const response = await fetch(`/api/chats/${chatId}`, {
         method: "GET",
         headers: {
@@ -52,8 +56,6 @@ export function ChatContainer() {
       setError(
         `An error occurred: ${err instanceof Error ? err.message : String(err)}`
       );
-    } finally {
-      setLoading(false);
     }
   }, [chatId]);
 
@@ -77,17 +79,16 @@ export function ChatContainer() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const hasMessages = useMemo(() => messages.length > 0, [messages]);
-
   // Fetch initial messages when chatId is present
   useEffect(() => {
     if (!chatId) {
-      setLoading(false);
       return;
     }
 
     fetchMessages();
   }, [chatId, fetchMessages]);
+
+  console.log("mess", messages, id);
 
   return (
     <div className="h-full flex bg-white">
@@ -105,7 +106,7 @@ export function ChatContainer() {
           <>
             {/* Content Area */}
             <div className="flex-1 flex flex-col min-h-0">
-              {!hasMessages ? (
+              {!haveMessages ? (
                 <EmptyState />
               ) : (
                 <ChatView

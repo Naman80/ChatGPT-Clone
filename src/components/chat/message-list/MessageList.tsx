@@ -68,11 +68,7 @@ export function MessageList({
             }
 
             return (
-              <MessageItem
-                key={messageForItem.id}
-                message={messageForItem}
-                isLast={index === messages.length - 1}
-              />
+              <MessageItem key={messageForItem.id} message={messageForItem} />
             );
           })}
 

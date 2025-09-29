@@ -55,8 +55,7 @@ export const ChatDropdown = memo(
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="bg-white border-gray-200 min-w-[120px]"
-            align="end"
-            alignOffset={10}
+            align="start"
           >
             <DropdownMenuItem
               className="text-sm text-gray-900 hover:bg-gray-200 flex items-center gap-2"
