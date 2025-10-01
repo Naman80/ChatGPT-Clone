@@ -39,9 +39,9 @@ export function MessageList({
 
   // Messages view with improved design
   return (
-    <div className="h-full bg-gradient-to-br from-gray-50 to-white">
+    <div className="h-full bg-white">
       <ScrollArea className="h-full" ref={scrollAreaRef}>
-        <div className="w-full max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
+        <div className="w-full max-w-4xl mx-auto">
           {messages.map((message, index) => {
             // Extract text content from UIMessage parts
             const textPart = (

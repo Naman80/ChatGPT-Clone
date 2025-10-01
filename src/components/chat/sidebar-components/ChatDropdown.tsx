@@ -58,14 +58,14 @@ export const ChatDropdown = memo(
             align="start"
           >
             <DropdownMenuItem
-              className="text-sm text-gray-900 hover:bg-gray-200 flex items-center gap-2"
+              className="text-sm text-gray-900! hover:bg-gray-200! focus:bg-gray-200! flex items-center gap-2"
               onClick={onRename}
             >
               <EditIcon className="h-3 w-3" />
               Rename
             </DropdownMenuItem>
             <DropdownMenuItem
-              className="text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+              className="text-sm text-red-600! hover:bg-red-50! focus:bg-red-50! flex items-center gap-2"
               onClick={onDeleteClick}
             >
               <TrashIcon className="h-3 w-3" />

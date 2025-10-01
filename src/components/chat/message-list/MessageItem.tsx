@@ -29,10 +29,10 @@ export function MessageItem({ message }: MessageItemProps) {
   if (isUser) {
     // User message as a modern chat bubble
     return (
-      <div className="flex justify-end mb-3 sm:mb-4 px-2 sm:px-4">
+      <div className="flex justify-end px-4 md:px-6 xl:px-16 py-12 pb-0 first:pt-3">
         <div className="group flex flex-col items-end max-w-[85%] sm:max-w-[80%] md:max-w-[70%]">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-2xl rounded-br-md px-4 py-3 shadow-lg shadow-blue-200/50 transform transition-all duration-200 hover:shadow-xl hover:shadow-blue-200/70">
-            <div className="whitespace-pre-wrap break-words text-sm sm:text-base leading-relaxed">
+          <div className="bg-[#e5f3ff] text-[#00284d] rounded-[18px] px-4 py-3">
+            <div className="whitespace-pre-wrap text-base">
               {message.content}
             </div>
           </div>
@@ -46,22 +46,15 @@ export function MessageItem({ message }: MessageItemProps) {
 
   // Assistant message with enhanced avatar and styling
   return (
-    <div className="group flex w-full gap-3 mb-3 sm:mb-4 px-2 sm:px-4">
-      {/* Enhanced Avatar */}
-      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg shadow-green-200/50 ring-2 ring-white">
-        <BotIcon className="h-4 w-4 text-white" />
-      </div>
-
+    <div className="group flex w-full gap-3 px-4 md:px-6 xl:px-16 last:pb-10!">
       {/* Message Content */}
-      <div className="flex-1 min-w-0">
-        <div className="bg-white rounded-2xl rounded-tl-md px-4 py-3 shadow-lg shadow-gray-200/50 border border-gray-100 transform transition-all duration-200 hover:shadow-xl hover:shadow-gray-200/70">
-          <div className="prose prose-sm max-w-none">
-            <div className="whitespace-pre-wrap break-words text-gray-900 text-sm sm:text-base leading-relaxed">
-              {message.content}
-              {message.isStreaming && (
-                <span className="inline-block w-0.5 h-4 bg-green-500 ml-1 animate-pulse rounded" />
-              )}
-            </div>
+      <div className="flex flex-col w-full flex-1 mx-auto min-w-0 max-w-[40rem] xl:max-w-[48rem]">
+        <div className="prose prose-sm max-w-full bg-white">
+          <div className="whitespace-pre-wrap break- leading-normal text-gray-900 text-base">
+            {message.content}
+            {message.isStreaming && (
+              <span className="inline-block w-0.5 h-4 bg-green-500 ml-1 animate-pulse rounded" />
+            )}
           </div>
         </div>
 

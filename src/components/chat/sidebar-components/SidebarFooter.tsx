@@ -20,13 +20,10 @@ export const SidebarFooter = memo(({ isCollapsed }: SidebarFooterProps) => {
   }
 
   return (
-    <div
-      className={cn("border-t border-gray-100", isCollapsed ? "lg:p-4" : "p-4")}
-    >
+    <div className={cn("border-t border-gray-100 p-1.5")}>
       <button
         className={cn(
-          "w-full flex items-center gap-3 cursor-pointer",
-          isCollapsed ? "lg:justify-center" : ""
+          "w-full flex items-center gap-3 cursor-pointer px-2.5 py-1.5"
         )}
         onClick={handleProfileClick}
       >

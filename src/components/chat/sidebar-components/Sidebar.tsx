@@ -103,45 +103,43 @@ export const Sidebar = memo(({ isCollapsed, onToggle }: SidebarProps) => {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed top-0 left-0 z-50 h-full bg-white text-gray-900 transition-all duration-300 ease-in-out md:relative md:z-auto border-r border-gray-200",
+          "fixed top-0 left-0 z-50 h-full bg-[#f9f9f9] text-gray-900 transition-all duration-200 ease-in-out md:relative md:z-auto border-r border-gray-200",
           // Mobile behavior
           "md:flex md:flex-col",
           isCollapsed
-            ? "-translate-x-full md:translate-x-0 md:w-16" // Mobile hidden, Desktop collapsed (64px)
-            : "translate-x-0 w-80 md:w-80" // Mobile open, Desktop open (320px)
+            ? "-translate-x-full md:translate-x-0 md:w-[56px] bg-[#ffffff]" // Mobile hidden, Desktop collapsed (64px)
+            : "translate-x-0 w-65 md:w-[260px]" // Mobile open, Desktop open (320px)
         )}
       >
         <div className="flex flex-col h-full justify-between">
-          {!isCollapsed && <SidebarHeader onToggle={onToggle} />}
+          <div className="flex flex-col ">
+            {<SidebarHeader onToggle={onToggle} isCollapsed={isCollapsed} />}
 
-          {/* Menu Items */}
-          <div
-            className={cn(
-              "space-y-2",
-              isCollapsed ? "md:px-2 md:py-4" : "px-3 py-4"
+            {/* Menu Items */}
+
+            <SidebarMenu isCollapsed={isCollapsed} />
+
+            {/* Separator */}
+            {/* {<div className="border-t border-gray-100 mx-3" />} */}
+
+            {/* Chats Section */}
+            {!isCollapsed && (
+              <div className="p-1.5 pb-0">
+                <h3 className="text-sm font-medium text-[#8e8e8e] px-2.5 py-1.5 pb-0">
+                  Chats
+                </h3>
+              </div>
             )}
-          >
-            <SidebarMenu isCollapsed={isCollapsed} onToggle={onToggle} />
+
+            {/* Chat List */}
+            {!isCollapsed && (
+              <div className={cn("flex-1 overflow-hidden p-1.5")}>
+                <ScrollArea className="h-full">
+                  <div className="flex flex-col">{chatItems}</div>
+                </ScrollArea>
+              </div>
+            )}
           </div>
-
-          {/* Separator */}
-          {!isCollapsed && <div className="border-t border-gray-100 mx-3" />}
-
-          {/* Chats Section */}
-          {!isCollapsed && (
-            <div className="p-4 pb-1">
-              <h3 className="text-xs font-medium text-gray-500">Chats</h3>
-            </div>
-          )}
-
-          {/* Chat List */}
-          {!isCollapsed && (
-            <div className={cn("flex-1 overflow-hidden p-3")}>
-              <ScrollArea className="h-full">
-                <div className="space-y-1 pb-4">{chatItems}</div>
-              </ScrollArea>
-            </div>
-          )}
 
           <SidebarFooter isCollapsed={isCollapsed} />
         </div>
