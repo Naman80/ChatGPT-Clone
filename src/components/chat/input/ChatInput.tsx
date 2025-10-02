@@ -1,6 +1,13 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback, memo } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  memo,
+  useMemo,
+} from "react";
 import { MicIcon, ArrowUpIcon, X, Edit2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeatureDropdown } from "./FeatureDropdown";
@@ -65,12 +72,6 @@ export const ChatInput = memo(
       });
     }, []);
 
-    // Handle image edit (placeholder - implement your edit logic)
-    const handleEditImage = useCallback((id: string) => {
-      console.log("Edit image:", id);
-      // Implement your image editing logic here
-    }, []);
-
     const handleSubmit = useCallback(
       async (e: React.FormEvent) => {
         e.preventDefault();
@@ -107,10 +108,51 @@ export const ChatInput = memo(
       [handleSubmit]
     );
 
-    console.log(files);
+    const filesComponent = useMemo(() => {
+      return files.map((file) => {
+        return (
+          <div key={file.id} className="relative h-16 flex-shrink-0">
+            {file.type === "image" && file.url ? (
+              <Image
+                width={70}
+                height={70}
+                src={file.url}
+                alt={file.file.name}
+                className="h-full object-cover rounded-md"
+              />
+            ) : (
+              <div className="relative w-full h-full border border-gray-200 rounded-2xl flex items-center justify-center gap-2 p-2">
+                <div className="flex items-center justify-center rounded-lg h-10 w-10 shrink-0 bg-red-500">
+                  <FileText className="h-5 w-5 text-white" />
+                </div>
+                <div className="max-w-[250px] flex flex-col">
+                  <p className="text-sm text-gray-600 truncate w-full text-center">
+                    {file.file.name}
+                  </p>
+                  {file.type && (
+                    <p className="text-sm text-gray-600">{file.type}</p>
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="absolute top-1 right-1 flex gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="w-5 h-5 bg-black rounded-full p-0 hover:bg-opacity-70"
+                onClick={() => handleRemoveFile(file.id)}
+              >
+                <X className="h-4 w-4 text-white" />
+              </Button>
+            </div>
+          </div>
+        );
+      });
+    }, [files, handleRemoveFile]);
 
     return (
-      <div className="w-full bg-white p-4">
+      <div className="w-full bg-white p-5">
         <form onSubmit={handleSubmit} className="w-full">
           <div
             className={`bg-white border border-gray-200 shadow-lg flex flex-col p-2 gap-2 max-w-4xl mx-auto
@@ -120,55 +162,7 @@ export const ChatInput = memo(
             {/* File Preview Area */}
             {files.length > 0 && (
               <div className="flex flex-wrap gap-2 p-2 max-h-[100px] overflow-y-scroll">
-                {files.map((file) => (
-                  <div key={file.id} className="relative h-16 flex-shrink-0">
-                    {file.type === "image" && file.url ? (
-                      <Image
-                        width={70}
-                        height={70}
-                        src={file.url}
-                        alt={file.file.name}
-                        className="h-full object-cover rounded-md"
-                      />
-                    ) : (
-                      <div className="relative w-full h-full border border-gray-200 rounded-2xl flex items-center justify-center gap-2 p-2">
-                        <div className="flex items-center justify-center rounded-lg h-10 w-10 shrink-0 bg-red-500">
-                          <FileText className="h-5 w-5 text-white" />
-                        </div>
-                        <div className="max-w-[250px] flex flex-col">
-                          <p className="text-sm text-gray-600 truncate w-full text-center">
-                            {file.file.name}
-                          </p>
-                          {file.type && (
-                            <p className="text-sm text-gray-600">{file.type}</p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    <div className="absolute top-1 right-1 flex gap-1">
-                      {file.type === "image" && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="w-5 h-5 bg-black rounded-full p-0 hover:bg-opacity-70"
-                          onClick={() => handleEditImage(file.id)}
-                        >
-                          <Edit2 className="h-3 w-3 text-white" />
-                        </Button>
-                      )}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="w-5 h-5 bg-black rounded-full p-0 hover:bg-opacity-70"
-                        onClick={() => handleRemoveFile(file.id)}
-                      >
-                        <X className="h-4 w-4 text-white" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                {filesComponent}
               </div>
             )}
 

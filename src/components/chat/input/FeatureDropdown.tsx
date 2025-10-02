@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PlusCircle, Paperclip } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface FeatureDropdownProps {
   onFileSelect: (file: FileList) => void;
@@ -30,6 +31,13 @@ export const FeatureDropdown = memo(
       }
     }, []);
 
+    const supportedFormatList = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/jpg",
+    ];
+
     const onFileSelectDirect = useCallback(
       (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
@@ -37,10 +45,20 @@ export const FeatureDropdown = memo(
           // Handle selected files here
           console.log("Selected files:", files);
 
-          const file = files[0];
-          console.log("Selected file:", file);
-          const fileURL = URL.createObjectURL(file);
-          console.log("File URL:", fileURL);
+          const fileLength = files.length;
+
+          const lastAddedFile = files[fileLength - 1];
+
+          console.log(lastAddedFile, "last added fiel");
+
+          // check for file size
+
+          if (lastAddedFile.size > 10 * 1000 * 1000) {
+            toast.error("File size too large. File Limit 5MB");
+            return;
+          }
+
+          // check for type here
 
           onFileSelect(files);
 
